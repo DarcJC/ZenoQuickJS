@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "QuickJSTypes.h"
 #include "ZenoQuickJS.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "QuickJSBlueprintLibrary.generated.h"
@@ -14,5 +15,5 @@ class ZENOQUICKJS_API UQuickJSBlueprintLibrary : public UBlueprintFunctionLibrar
 	
 public:
 	UFUNCTION(BlueprintCallable, meta = ( Keywords = "Debug" ))
-	static void EvalFile(const FString& FilePath);
+	static bool EvalFile(const FString& FilePath, EQuickJSEvalType EvalType = EQuickJSEvalType::Global);
 };

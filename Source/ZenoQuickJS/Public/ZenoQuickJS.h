@@ -7,7 +7,9 @@
 #include "quickjs/quickjs-libc.h"
 #include "quickjs/quickjspp.hpp"
 
-class FZenoQuickJSModule : public IModuleInterface
+struct FQuickJSSearchPath;
+
+class ZENOQUICKJS_API FZenoQuickJSModule : public IModuleInterface
 {
 public:
 
@@ -23,11 +25,16 @@ public:
 	qjs::Runtime& GetManagedRuntime();
 	TSharedRef<qjs::Context> GetGlobalContext();
 
+	static const TArray<FQuickJSSearchPath>& GetScriptSearchPaths();
+	static void AddScriptSearchPath(const FString& DirPath, int32 Priority = 0);
+
 private:
 	qjs::Runtime Runtime;
 	TSharedPtr<qjs::Context> GlobalContext;
 
 	bool bIsLiving = false;
+	
+	static inline TArray<FQuickJSSearchPath> ScriptSourceSearchDirectory {};
 };
 
 DECLARE_LOG_CATEGORY_EXTERN(LogQuickJS, Display, Display);

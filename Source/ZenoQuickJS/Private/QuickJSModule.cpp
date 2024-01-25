@@ -1,10 +1,19 @@
 ﻿#include "QuickJSModule.h"
 
+#include "QuickJSErrors.h"
+#include "QuickJSSearchPath.h"
+#include "ZenoQuickJS.h"
+
 JSModuleDef* FQuickJSModule::DefaultModuleLoaderFunction(JSContext* Context, const char* ModuleName, void* Opaque)
 {
 	check(Context != nullptr);
 
 	const FString ModulePath = ResolveModulePath(ModuleName);
+	if (ModulePath.IsEmpty())
+	{
+		throw FQuickJSFileNotFoundError(FString{ ModuleName });
+	}
+	
 	JSModuleDef* NewModule = nullptr;
 	if (FString ModuleContent; FFileHelper::LoadFileToString(ModuleContent, *ModulePath))
 	{
@@ -30,21 +39,61 @@ JSModuleDef* FQuickJSModule::DefaultModuleLoaderFunction(JSContext* Context, con
 
 FString FQuickJSModule::ResolveModulePath(const char* ModuleName)
 {
-	FString ModulePath { ModuleName };
-	FString Extension = FPaths::GetExtension(ModulePath, false);
-	if (FPaths::IsRelative(ModulePath))
-	{
-	}
-	else if (Extension.IsEmpty())
-	{
-		// If absolute path without extension name, try with known extensions
-	}
-	else
-	{
-		ModulePath.Reset();
-	}
+    FString ModulePath { ModuleName };
+    const FString Extension = FPaths::GetExtension(ModulePath, false);
+    const TArray<FString>& ValidExtensions = GetValidFileExtension();
 
-	return ModulePath;
+    if (FPaths::IsRelative(ModulePath))
+    {
+        const TArray<FQuickJSSearchPath>& SearchPaths = FZenoQuickJSModule::GetScriptSearchPaths();
+        // Try relative path in search paths
+        for (const auto& [DirPath, Priority] : SearchPaths)
+        {
+            if (Extension.IsEmpty())
+            {
+                // Try with known extensions
+                for (const FString& Ext : ValidExtensions)
+                {
+                    FString TestPath = FPaths::Combine(DirPath, ModulePath + TEXT(".") + Ext);
+                    if (FPaths::FileExists(TestPath))
+                    {
+                        return TestPath;
+                    }
+                }
+            }
+            else
+            {
+                FString TestPath = FPaths::Combine(DirPath, ModulePath);
+                if (FPaths::FileExists(TestPath))
+                {
+                    return TestPath;
+                }
+            }
+        }
+    }
+    else if (Extension.IsEmpty())
+    {
+        // If absolute path without extension, try with known extensions
+        for (const FString& Ext : ValidExtensions)
+        {
+            FString TestPath = ModulePath + TEXT(".") + Ext;
+            if (FPaths::FileExists(TestPath))
+            {
+                return TestPath;
+            }
+        }
+    }
+    else
+    {
+        // If absolute path with extension, check if file exists
+        if (FPaths::FileExists(ModulePath))
+        {
+            return ModulePath;
+        }
+    }
+
+    // If no valid path found, return empty string
+    return FString{};
 }
 
 TArray<FString>& FQuickJSModule::GetValidFileExtension()
