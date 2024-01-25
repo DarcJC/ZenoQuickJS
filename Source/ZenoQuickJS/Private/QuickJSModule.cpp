@@ -11,7 +11,7 @@ JSModuleDef* FQuickJSModule::DefaultModuleLoaderFunction(JSContext* Context, con
 	const FString ModulePath = ResolveModulePath(ModuleName);
 	if (ModulePath.IsEmpty())
 	{
-		throw FQuickJSFileNotFoundError(FString{ ModuleName });
+		return nullptr;
 	}
 	
 	JSModuleDef* NewModule = nullptr;

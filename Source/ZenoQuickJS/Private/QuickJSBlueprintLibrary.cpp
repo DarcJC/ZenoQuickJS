@@ -2,6 +2,7 @@
 #include "QuickJSBlueprintLibrary.h"
 
 #include "QuickJSErrors.h"
+#include "QuickJSModule.h"
 
 bool UQuickJSBlueprintLibrary::EvalFile(const FString& FilePath, EQuickJSEvalType EvalType)
 {
@@ -9,15 +10,24 @@ bool UQuickJSBlueprintLibrary::EvalFile(const FString& FilePath, EQuickJSEvalTyp
 	const TSharedRef<qjs::Context> Context = Module.GetGlobalContext();
 	try
 	{
-		const qjs::Value Ret = Context->evalFile(TCHAR_TO_ANSI(*FilePath), JS_EVAL_TYPE_MODULE);
-		if (Ret.isError())
+		const FString ResolvedPath = FQuickJSModule::ResolveModulePath(TCHAR_TO_ANSI(*FilePath));
+		FString ModuleFileContext;
+		if (!ResolvedPath.IsEmpty() && FFileHelper::LoadFileToString(ModuleFileContext, *ResolvedPath))
 		{
-			const JSValue Value = Ret.as<JSValue>();
-			UE_LOG(LogQuickJS, Error, TEXT("Eval return an error %hs"), JS_ToCString(Context->ctx, Value));
+			 const qjs::Value Ret = Context->eval(TCHAR_TO_ANSI(*ModuleFileContext), TCHAR_TO_ANSI(*ResolvedPath), EvalType);
+			 if (Ret.isError())
+			 {
+				   const JSValue Value = Ret.as<JSValue>();
+				   UE_LOG(LogQuickJS, Error, TEXT("Eval return an error %hs"), JS_ToCString(Context->ctx, Value));
+			 }
+			 else
+			 {
+				   return true;
+			 }
 		}
 		else
 		{
-			return true;
+			UE_LOG(LogQuickJS, Error, TEXT("Failed to load file %s : File not found / insufficient permission."), *FilePath);
 		}
 	}
 	catch (qjs::exception& Err)
