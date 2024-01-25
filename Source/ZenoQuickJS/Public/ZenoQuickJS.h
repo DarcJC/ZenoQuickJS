@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
+#include "quickjs/quickjs-libc.h"
 #include "quickjs/quickjspp.hpp"
 
 class FZenoQuickJSModule : public IModuleInterface
@@ -14,8 +15,19 @@ public:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 
-	quickjs::runtime& GetManagedRuntime();
+	static FORCEINLINE FZenoQuickJSModule& GetChecked()
+	{
+		return FModuleManager::GetModuleChecked<FZenoQuickJSModule>("ZenoQuickJS");
+	}
+
+	qjs::Runtime& GetManagedRuntime();
+	TSharedRef<qjs::Context> GetGlobalContext();
 
 private:
-	quickjs::runtime Runtime;
+	qjs::Runtime Runtime;
+	TSharedPtr<qjs::Context> GlobalContext;
+
+	bool bIsLiving = false;
 };
+
+DECLARE_LOG_CATEGORY_EXTERN(LogQuickJS, Display, Display);
