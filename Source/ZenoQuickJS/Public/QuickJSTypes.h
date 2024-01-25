@@ -15,4 +15,3 @@ enum EQuickJSEvalType : uint8
 	Indirect = 3 << 0 UMETA(DisplayName = "Indirect Call (Internal Use)", Hidden),
 };
 ENUM_CLASS_FLAGS(EQuickJSEvalType)
-

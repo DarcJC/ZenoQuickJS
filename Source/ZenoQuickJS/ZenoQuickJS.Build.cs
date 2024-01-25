@@ -61,9 +61,15 @@ public class ZenoQuickJS : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"Projects",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
+
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.Add("PluginUtils");
+		}
 		
 		
 		DynamicallyLoadedModuleNames.AddRange(

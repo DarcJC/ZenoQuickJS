@@ -2,8 +2,11 @@
 
 #include "ZenoQuickJS.h"
 
+#include "PluginUtils.h"
+#include "QuickJSBlueprintLibrary.h"
 #include "QuickJSModule.h"
 #include "QuickJSSearchPath.h"
+#include "Interfaces/IPluginManager.h"
 
 #define LOCTEXT_NAMESPACE "FZenoQuickJSModule"
 
@@ -15,7 +18,7 @@ void Println(const qjs::rest<std::string>& Args)
 	{
 		Output.Append(Arg.c_str());
 	}
-	UE_LOG(LogTemp, Display, TEXT("%s"), *Output);
+	UE_LOG(LogQuickJS, Display, TEXT("%s"), *Output);
 }
 
 void FZenoQuickJSModule::StartupModule()
@@ -59,6 +62,15 @@ TSharedRef<qjs::Context> FZenoQuickJSModule::GetGlobalContext()
 		// Setup zeno module
 		auto& ZenoModule = GlobalContext->addModule("zeno");
 		ZenoModule.function<&Println>("println");
+		
+#if UE_BUILD_DEBUG + UE_BUILD_DEVELOPMENT && WITH_EDITOR
+		// Add debug search path
+		const FString ContentDir = IPluginManager::Get().FindPlugin("ZenoQuickJS")->GetContentDir();
+		AddScriptSearchPath(ContentDir / "Scripts" / "BuiltIn", 0);
+#endif
+
+		// Load debug module
+		UQuickJSBlueprintLibrary::EvalFile("debug.js", EQuickJSEvalType::Module);
 	}
 	
 	return GlobalContext.ToSharedRef();

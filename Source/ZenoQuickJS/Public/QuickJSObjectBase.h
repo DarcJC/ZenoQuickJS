@@ -10,4 +10,6 @@ UCLASS()
 class ZENOQUICKJS_API UQuickJSObjectBase : public UObject
 {
 	GENERATED_BODY()
+
+protected:
 };
