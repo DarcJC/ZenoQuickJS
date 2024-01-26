@@ -27,8 +27,10 @@ void SetupLog(qjs::Context::Module& InModule)
 	InModule.function<&PrintWarning>("PrintWarning");
 	InModule.function<&PrintError>("PrintError");
 	InModule.function<&PrintFatal>("PrintFatal");
-	
+
+#if WITH_EDITOR
 	UQuickJSTestObject* TestObject = NewObject<UQuickJSTestObject>();
 	JSValue Wrapper = qjs::js_traits<UQuickJSTestObject*>::wrap(InModule.ctx, TestObject);
 	InModule.add("Test", MoveTemp(Wrapper));
+#endif
 }

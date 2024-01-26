@@ -14,6 +14,7 @@ class ZENOQUICKJS_API UQuickJSObjectBase : public UObject
 protected:
 };
 
+#if WITH_EDITORONLY_DATA
 UCLASS()
 class UQuickJSTestObject : public UObject
 {
@@ -23,3 +24,4 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString Text;
 };
+#endif
