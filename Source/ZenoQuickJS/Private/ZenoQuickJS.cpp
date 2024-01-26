@@ -4,7 +4,9 @@
 
 #include "QuickJSBlueprintLibrary.h"
 #include "QuickJSModule.h"
+#include "QuickJSObjectBase.h"
 #include "QuickJSSearchPath.h"
+#include "QuickJSTrait.h"
 #include "Interfaces/IPluginManager.h"
 
 #define LOCTEXT_NAMESPACE "FZenoQuickJSModule"

@@ -1306,12 +1306,13 @@ public:
         friend class Context;
 
         JSModuleDef * m;
-        JSContext * ctx;
         const char * name;
 
         using nvp = std::pair<const char *, Value>;
         std::vector<nvp> exports;
     public:
+        JSContext * ctx;
+        
         Module(JSContext * ctx, const char * name) : ctx(ctx), name(name)
         {
             m = JS_NewCModule(ctx, name, [](JSContext * ctx, JSModuleDef * m) noexcept {

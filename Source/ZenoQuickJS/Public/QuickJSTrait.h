@@ -486,8 +486,8 @@ namespace qjs
 					return JS_UNDEFINED;
 				}
 
-				const T* UnrealObject = Guard->Get();
-				if (IsValid(UnrealObject))
+				const T* UnrealObject = Cast<T>(Guard->Get());
+				if (!IsValid(UnrealObject))
 				{
 					return JS_UNDEFINED;
 				}
@@ -520,46 +520,46 @@ namespace qjs
 				auto* Guard = static_cast<FGCObjectScopeGuard*>(JS_GetOpaque(obj, QJSClassId));
 				if (!Guard)
 				{
-					return false; // 返回FALSE表示属性设置失败
+					return false;
 				}
 
-				const T* UnrealObject = Guard->Get();
-				if (IsValid(UnrealObject))
+				const T* UnrealObject = Cast<T>(Guard->Get());
+				if (!IsValid(UnrealObject))
 				{
-					return false; // 返回FALSE表示属性设置失败
+					return false;
 				}
 
-				// 将JSAtom转换为FString
+				// Cast JSAtom to FString
 				const char* PropNameCStr = JS_AtomToCString(ctx, atom);
 				FString PropName(PropNameCStr);
 				JS_FreeCString(ctx, PropNameCStr);
 
-				// 查找属性
+				// Lookup property
 				FProperty* Property = UnrealObject->GetClass()->FindPropertyByName(FName(*PropName));
 				if (!Property)
 				{
-					return false; // 如果未找到属性，返回FALSE
+					return false;
 				}
 
-				// 处理字符串类型属性
+				// Handling string property
 				if (FStrProperty* StrProperty = CastField<FStrProperty>(Property))
 				{
-					// 将JSValue转换为字符串
+					// Cast JSValue to string
 					size_t Len;
 					const char* Str = JS_ToCStringLen(ctx, &Len, value);
 					if (!Str)
 					{
-						return false; // JSValue到字符串的转换失败
+						return false;
 					}
 
-					// 设置Unreal对象的属性值
+					// Set string property
 					FString UnrealStr = FString(UTF8_TO_TCHAR(Str));
-					StrProperty->SetPropertyValue_InContainer(UnrealObject, UnrealStr);
+					StrProperty->SetPropertyValue_InContainer(static_cast<void*>(const_cast<T*>(UnrealObject)), UnrealStr);
 					JS_FreeCString(ctx, Str);
-					return false; // 返回TRUE表示属性设置成功
+					return true;
 				}
 
-				// 如果是未处理的属性类型，返回FALSE
+				// Types we are not handled
 				return false;
 			},
 		};

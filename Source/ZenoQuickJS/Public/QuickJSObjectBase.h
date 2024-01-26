@@ -13,3 +13,13 @@ class ZENOQUICKJS_API UQuickJSObjectBase : public UObject
 
 protected:
 };
+
+UCLASS()
+class UQuickJSTestObject : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString Text;
+};
