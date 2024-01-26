@@ -107,3 +107,19 @@ TArray<FString>& FQuickJSModule::GetValidFileExtension()
 
 	return ValidTextExtensions;
 }
+
+void FQuickJSModule::InitUnrealExportModule(const TSharedRef<qjs::Context>& InContext)
+{
+	qjs::Context::Module& UnrealModule = InContext->addModule("unreal");
+	for (TObjectIterator<UStruct> It; It; ++It)
+	{
+		UStruct* Struct = *It;
+		if (Struct->IsA<UClass>())
+		{
+			UClass* Class = Cast<UClass>(Struct);
+		}
+		else
+		{
+		}
+	}
+}

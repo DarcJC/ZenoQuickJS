@@ -76,7 +76,6 @@ void FZenoQuickJSModule::InitContext(const TSharedRef<qjs::Context>& Context)
 	// Setup zeno module
 	auto& ZenoModule = Context->addModule("zeno");
 	SetupLog(ZenoModule);
-	// ZenoModule.function<&Println>("println");
 
 #if UE_BUILD_DEBUG + UE_BUILD_DEVELOPMENT && WITH_EDITOR
 	// Add debug search path
