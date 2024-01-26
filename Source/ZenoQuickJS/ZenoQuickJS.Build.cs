@@ -1,6 +1,7 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 using System.IO;
+using EpicGames.Core;
 using UnrealBuildTool;
 
 public class ZenoQuickJS : ModuleRules
@@ -10,14 +11,16 @@ public class ZenoQuickJS : ModuleRules
 		CStandard = CStandardVersion.Latest;
 		CppStandard = CppStandardVersion.Latest;
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		bEnableExceptions = true;
 		
+		// Copy dynamic link libraries
 		var platformString = (Target.Platform == UnrealTargetPlatform.Win64) ? "windows-x86_64" : null;
 		if (platformString == null)
 		{
 			 throw new System.Exception("Unsupported platform");
 		}
-		var quickJsBasePath = Path.Combine(PluginDirectory, "ThirdParty/quickjs/library", platformString);
-		var includePath = Path.Combine(PluginDirectory, "ThirdParty/quickjs/include"); 
+		var quickJsBasePath = Path.Combine(PluginDirectory, "ThirdParty", "quickjs", "library", platformString);
+		var includePath = Path.Combine(PluginDirectory, "ThirdParty", "quickjs", "include"); 
 		PublicIncludePaths.Add(includePath);
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
@@ -30,6 +33,10 @@ public class ZenoQuickJS : ModuleRules
 				  RuntimeDependencies.Add(Path.Combine("$(BinaryOutputDir)", Path.GetFileName(dllFile)), dllFile);
 			 }
 		}
+		
+		// Copy built-in script
+		var builtInScriptPath = Path.Combine(PluginDirectory, "Content", "Scripts", "*");
+		RuntimeDependencies.Add("$(ProjectDir)/Scripts", builtInScriptPath, StagedFileType.UFS);
 		
 		PublicIncludePaths.AddRange(
 			new string[] {
@@ -68,7 +75,6 @@ public class ZenoQuickJS : ModuleRules
 
 		if (Target.bBuildEditor)
 		{
-			PrivateDependencyModuleNames.Add("PluginUtils");
 		}
 		
 		

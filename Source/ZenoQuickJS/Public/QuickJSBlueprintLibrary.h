@@ -14,6 +14,9 @@ class ZENOQUICKJS_API UQuickJSBlueprintLibrary : public UBlueprintFunctionLibrar
 	GENERATED_BODY()
 	
 public:
-	UFUNCTION(BlueprintCallable, meta = ( Keywords = "Debug" ))
+	UFUNCTION(BlueprintCallable, meta = ( Keywords = "Eval File Exec" ))
 	static bool EvalFile(const FString& FilePath, EQuickJSEvalType EvalType = EQuickJSEvalType::Global);
+
+	UFUNCTION(BlueprintCallable, meta = ( Keywords = "Eval Text Exec" ))
+	static bool Eval(const FString& InputString, EQuickJSEvalType EvalType = EQuickJSEvalType::Global);
 };

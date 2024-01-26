@@ -2,7 +2,6 @@
 
 #include "ZenoQuickJS.h"
 
-#include "PluginUtils.h"
 #include "QuickJSBlueprintLibrary.h"
 #include "QuickJSModule.h"
 #include "QuickJSSearchPath.h"
@@ -65,9 +64,14 @@ TSharedRef<qjs::Context> FZenoQuickJSModule::GetGlobalContext()
 		
 #if UE_BUILD_DEBUG + UE_BUILD_DEVELOPMENT && WITH_EDITOR
 		// Add debug search path
+		// Debug path has a higher priority
 		const FString ContentDir = IPluginManager::Get().FindPlugin("ZenoQuickJS")->GetContentDir();
-		AddScriptSearchPath(ContentDir / "Scripts" / "BuiltIn", 0);
+		AddScriptSearchPath(ContentDir / "Scripts" / "BuiltIn", 10);
 #endif
+
+		// Add default search path
+		// AddScriptSearchPath("/ZenoQuickJS/Scripts/BuiltIn", 0);
+		AddScriptSearchPath(FPaths::ProjectDir() / "Scripts" / "BuiltIn", 0);
 
 		// Load debug module
 		UQuickJSBlueprintLibrary::EvalFile("debug.js", EQuickJSEvalType::Module);

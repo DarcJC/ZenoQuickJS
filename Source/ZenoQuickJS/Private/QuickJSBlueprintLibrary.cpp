@@ -14,20 +14,22 @@ bool UQuickJSBlueprintLibrary::EvalFile(const FString& FilePath, EQuickJSEvalTyp
 		FString ModuleFileContext;
 		if (!ResolvedPath.IsEmpty() && FFileHelper::LoadFileToString(ModuleFileContext, *ResolvedPath))
 		{
-			 const qjs::Value Ret = Context->eval(TCHAR_TO_ANSI(*ModuleFileContext), TCHAR_TO_ANSI(*ResolvedPath), EvalType);
-			 if (Ret.isError())
-			 {
-				   const JSValue Value = Ret.as<JSValue>();
-				   UE_LOG(LogQuickJS, Error, TEXT("Eval return an error %hs"), JS_ToCString(Context->ctx, Value));
-			 }
-			 else
-			 {
-				   return true;
-			 }
+			const qjs::Value Ret = Context->eval(
+				TCHAR_TO_ANSI(*ModuleFileContext), TCHAR_TO_ANSI(*ResolvedPath), EvalType);
+			if (Ret.isError())
+			{
+				const JSValue Value = Ret.as<JSValue>();
+				UE_LOG(LogQuickJS, Error, TEXT("Eval return an error %hs"), JS_ToCString(Context->ctx, Value));
+			}
+			else
+			{
+				return true;
+			}
 		}
 		else
 		{
-			UE_LOG(LogQuickJS, Error, TEXT("Failed to load file %s : File not found / insufficient permission."), *FilePath);
+			UE_LOG(LogQuickJS, Error, TEXT("Failed to load file %s : File not found / insufficient permission."),
+			       *FilePath);
 		}
 	}
 	catch (qjs::exception& Err)
@@ -39,4 +41,19 @@ bool UQuickJSBlueprintLibrary::EvalFile(const FString& FilePath, EQuickJSEvalTyp
 		UE_LOG(LogQuickJS, Error, TEXT("Failed to execute file %s : %hs"), *FilePath, Err.what());
 	}
 	return false;
+}
+
+bool UQuickJSBlueprintLibrary::Eval(const FString& InputString, EQuickJSEvalType EvalType)
+{
+	FZenoQuickJSModule& Module = FZenoQuickJSModule::GetChecked();
+	const TSharedRef<qjs::Context> Context = Module.GetGlobalContext();
+
+	const qjs::Value Ret = Context->eval(TCHAR_TO_ANSI(*InputString), "<Blueprint>", EvalType);
+	if (Ret.isError())
+	{
+		const JSValue Value = Ret.as<JSValue>();
+		UE_LOG(LogQuickJS, Error, TEXT("Eval return an error %hs"), JS_ToCString(Context->ctx, Value));
+		return false;
+	}
+	return true;
 }

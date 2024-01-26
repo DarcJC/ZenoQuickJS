@@ -9,7 +9,7 @@ public:
 		Info = FString::Printf(TEXT("File '%s' not found."), *FilePath);
 	}
 
-	virtual inline char const* what() const override
+	char const* what() const noexcept
 	{
 		return TCHAR_TO_ANSI(*Info);
 	}
