@@ -28,6 +28,9 @@ public:
 	static const TArray<FQuickJSSearchPath>& GetScriptSearchPaths();
 	static void AddScriptSearchPath(const FString& DirPath, int32 Priority = 0);
 
+protected:
+	static void InitContext(const TSharedRef<qjs::Context>& Context);
+
 private:
 	qjs::Runtime Runtime;
 	TSharedPtr<qjs::Context> GlobalContext;
@@ -36,5 +39,7 @@ private:
 	
 	static inline TArray<FQuickJSSearchPath> ScriptSourceSearchDirectory {};
 };
+
+void SetupLog(qjs::Context::Module& InModule);
 
 DECLARE_LOG_CATEGORY_EXTERN(LogQuickJS, Display, Display);

@@ -48,12 +48,23 @@ bool UQuickJSBlueprintLibrary::Eval(const FString& InputString, EQuickJSEvalType
 	FZenoQuickJSModule& Module = FZenoQuickJSModule::GetChecked();
 	const TSharedRef<qjs::Context> Context = Module.GetGlobalContext();
 
-	const qjs::Value Ret = Context->eval(TCHAR_TO_ANSI(*InputString), "<Blueprint>", EvalType);
-	if (Ret.isError())
+	try
 	{
-		const JSValue Value = Ret.as<JSValue>();
-		UE_LOG(LogQuickJS, Error, TEXT("Eval return an error %hs"), JS_ToCString(Context->ctx, Value));
-		return false;
+		const qjs::Value Ret = Context->eval(TCHAR_TO_ANSI(*InputString), "<Blueprint>", EvalType);
+		if (Ret.isError())
+		{
+			const JSValue Value = Ret.as<JSValue>();
+			UE_LOG(LogQuickJS, Error, TEXT("Eval return an error %hs"), JS_ToCString(Context->ctx, Value));
+			return false;
+		}
+	}
+	catch (qjs::exception& Err)
+	{
+		UE_LOG(LogQuickJS, Error, TEXT("Failed to eval expr : %hs"), Err.get().toJSON().c_str());
+	}
+	catch (std::exception& Err)
+	{
+		UE_LOG(LogQuickJS, Error, TEXT("Failed to eval expr : %hs"), Err.what());
 	}
 	return true;
 }

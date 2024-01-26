@@ -24,6 +24,7 @@ JSModuleDef* FQuickJSModule::DefaultModuleLoaderFunction(JSContext* Context, con
 			js_module_set_import_meta(Context, FunctionEvalResult, true, false);
 			NewModule = static_cast<JSModuleDef*>(JS_VALUE_GET_PTR(FunctionEvalResult));
 			// set import.meta
+			// Meta is helpful to resolve relative import
 			JSValue Meta = JS_GetImportMeta(Context, NewModule);
 			if (!JS_IsException(Meta))
 			{
