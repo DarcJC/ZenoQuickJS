@@ -28,9 +28,11 @@ public:
 	 */
 	TSharedRef<JSValue> BorrowChecked() const;
 
-	JSValue* operator*() const;
+	JSValue operator*() const;
 
 	bool IsValid() const;
+
+	
 
 protected:
 	TSharedPtr<JSValue> Inner;
@@ -55,5 +57,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool Boolean;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UQuickJSTestObject* Object;
 };
 #endif

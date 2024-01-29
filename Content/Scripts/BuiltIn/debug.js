@@ -20,3 +20,9 @@ globalThis.console = {
         PrintError(ArgListToString(...args));
     },
 };
+
+globalThis.process = {
+    env: {
+        NODE_ENV: 'development',
+    },
+};

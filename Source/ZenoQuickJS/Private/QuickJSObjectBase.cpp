@@ -8,10 +8,10 @@ TSharedRef<JSValue> UJSValueContainer::BorrowChecked() const
 	return Inner.ToSharedRef();
 }
 
-JSValue* UJSValueContainer::operator*() const
+JSValue UJSValueContainer::operator*() const
 {
 	check( Inner.IsValid() );
-	return Inner.Get();
+	return *Inner;
 }
 
 bool UJSValueContainer::IsValid() const

@@ -2,252 +2,138 @@
 
 #include "QuickJSObjectBase.h"
 #include "quickjs/quickjspp.hpp"
+#include "Templates/RemoveCV.h"
 #include "UObject/GCObjectScopeGuard.h"
-
-static inline JSValue GetJSValueFromProperty(JSContext* Context, const UObject* Object, FProperty* Property)
-{
-	if (!Property)
-	{
-		return JS_UNDEFINED;
-	}
-
-	// handling string property
-	if (FStrProperty* StrProperty = CastField<FStrProperty>(Property))
-	{
-		FString Value = StrProperty->GetPropertyValue_InContainer(Object);
-		return JS_NewString(Context, TCHAR_TO_UTF8(*Value));
-	}
-
-	// handling boolean property
-	if (FBoolProperty* BoolProperty = CastField<FBoolProperty>(Property))
-	{
-		bool Value = BoolProperty->GetPropertyValue_InContainer(Object);
-		return JS_NewBool(Context, Value);
-	}
-
-	// handling integer property
-	if (FByteProperty* ByteProperty = CastField<FByteProperty>(Property))
-	{
-		uint8 Value = ByteProperty->GetPropertyValue_InContainer(Object);
-		return JS_NewUint32(Context, Value);
-	}
-	if (FUInt16Property* IntProperty = CastField<FUInt16Property>(Property))
-	{
-		uint16 Value = IntProperty->GetPropertyValue_InContainer(Object);
-		return JS_NewUint32(Context, Value);
-	}
-	if (FUInt32Property* IntProperty = CastField<FUInt32Property>(Property))
-	{
-		uint32 Value = IntProperty->GetPropertyValue_InContainer(Object);
-		return JS_NewUint32(Context, Value);
-	}
-	if (FUInt64Property* IntProperty = CastField<FUInt64Property>(Property))
-	{
-		uint64 Value = IntProperty->GetPropertyValue_InContainer(Object);
-		return JS_NewInt64(Context, Value);
-	}
-	if (FIntProperty* IntProperty = CastField<FIntProperty>(Property))
-	{
-		int32 Value = IntProperty->GetPropertyValue_InContainer(Object);
-		return JS_NewInt32(Context, Value);
-	}
-	if (FInt8Property* Int8Property = CastField<FInt8Property>(Property))
-	{
-		int8 Value = Int8Property->GetPropertyValue_InContainer(Object);
-		return JS_NewInt32(Context, Value);
-	}
-	if (FInt16Property* IntProperty = CastField<FInt16Property>(Property))
-	{
-		int16 Value = IntProperty->GetPropertyValue_InContainer(Object);
-		return JS_NewInt32(Context, Value);
-	}
-	if (FInt64Property* IntProperty = CastField<FInt64Property>(Property))
-	{
-		int64 Value = IntProperty->GetPropertyValue_InContainer(Object);
-		return JS_NewInt64(Context, Value);
-	}
-
-	// handling float property
-	if (FFloatProperty* FloatProperty = CastField<FFloatProperty>(Property))
-	{
-		float Value = FloatProperty->GetPropertyValue_InContainer(Object);
-		return JS_NewFloat64(Context, Value);
-	}
-	if (FDoubleProperty* DoubleProperty = CastField<FDoubleProperty>(Property))
-	{
-		double Value = DoubleProperty->GetPropertyValue_InContainer(Object);
-		return JS_NewFloat64(Context, Value);
-	}
-
-	// return undefined if can't handle
-	return JS_UNDEFINED;
-}
-
-static int SetJSValueToProperty(JSContext* Context, const JSValueConst& Value, UObject* Object, FProperty* Property)
-{
-	if (!Property)
-	{
-		JS_ThrowReferenceError(Context, "Failed to find property from object");
-		return -1;
-	}
-
-	// Handling string property
-	if (FStrProperty* StrProperty = CastField<FStrProperty>(Property))
-	{
-		// Cast JSValue to string
-		size_t Len;
-		const char* Str = JS_ToCStringLen(Context, &Len, Value);
-		if (!Str)
-		{
-			JS_ThrowTypeError(Context, "Value failed to cast to CString");
-			return -2;
-		}
-
-		// Set string property
-		FString UnrealStr = FString(UTF8_TO_TCHAR(Str));
-		StrProperty->SetPropertyValue_InContainer(Object, UnrealStr);
-		JS_FreeCString(Context, Str);
-		return true;
-	}
-	// Handling boolean property
-	if (FBoolProperty* BoolProperty = CastField<FBoolProperty>(Property))
-	{
-		int32 BoolValue;
-		if (JS_ToInt32(Context, &BoolValue, Value) < 0)
-		{
-			JS_ThrowTypeError(Context, "Value failed to cast to int32(bool)");
-			return -2;
-		}
-
-		BoolProperty->SetPropertyValue_InContainer(Object, BoolValue != 0);
-		return true;
-	}
-
-	// Handling integer property
-	if (FByteProperty* ByteProperty = CastField<FByteProperty>(Property))
-	{
-		uint32 ByteValue;
-		if (JS_ToUint32(Context, &ByteValue, Value) < 0)
-		{
-			JS_ThrowTypeError(Context, "Value failed to cast to uint32");
-			return -2;
-		}
-
-		ByteProperty->SetPropertyValue_InContainer(Object, ByteValue);
-	}
-	if (FUInt16Property* IntProperty = CastField<FUInt16Property>(Property))
-	{
-		uint32 IntValue;
-		if (JS_ToUint32(Context, &IntValue, Value) < 0)
-		{
-			JS_ThrowTypeError(Context, "Value failed to cast to uint32");
-			return -2;
-		}
-
-		IntProperty->SetPropertyValue_InContainer(Object, IntValue);
-	}
-	if (FUInt32Property* IntProperty = CastField<FUInt32Property>(Property))
-	{
-		uint32 IntValue;
-		if (JS_ToUint32(Context, &IntValue, Value) < 0)
-		{
-			JS_ThrowTypeError(Context, "Value failed to cast to uint32");
-			return -2;
-		}
-
-		IntProperty->SetPropertyValue_InContainer(Object, IntValue);
-	}
-	if (FUInt64Property* IntProperty = CastField<FUInt64Property>(Property))
-	{
-		int64 IntValue;
-		if (JS_ToInt64(Context, &IntValue, Value) < 0)
-		{
-			JS_ThrowTypeError(Context, "Value failed to cast to int64");
-			return -2;
-		}
-
-		IntProperty->SetPropertyValue_InContainer(Object, FMath::Abs(IntValue));
-	}
-	if (FIntProperty* IntProperty = CastField<FIntProperty>(Property))
-	{
-		int32 IntValue;
-		if (JS_ToInt32(Context, &IntValue, Value) < 0)
-		{
-			JS_ThrowTypeError(Context, "Value failed to cast to int32");
-			return -2;
-		}
-
-		IntProperty->SetPropertyValue_InContainer(Object, IntValue);
-		return true;
-	}
-	if (FInt8Property* IntProperty = CastField<FInt8Property>(Property))
-	{
-		int32 IntValue;
-		if (JS_ToInt32(Context, &IntValue, Value) < 0)
-		{
-			JS_ThrowTypeError(Context, "Value failed to cast to int32");
-			return -2;
-		}
-
-		IntProperty->SetPropertyValue_InContainer(Object, IntValue);
-		return true;
-	}
-	if (FInt16Property* IntProperty = CastField<FInt16Property>(Property))
-	{
-		int32 IntValue;
-		if (JS_ToInt32(Context, &IntValue, Value) < 0)
-		{
-			JS_ThrowTypeError(Context, "Value failed to cast to int32");
-			return -2;
-		}
-
-		IntProperty->SetPropertyValue_InContainer(Object, IntValue);
-		return true;
-	}
-	if (FInt64Property* IntProperty = CastField<FInt64Property>(Property))
-	{
-		int64 IntValue;
-		if (JS_ToInt64(Context, &IntValue, Value) < 0)
-		{
-			JS_ThrowTypeError(Context, "Value failed to cast to int64");
-			return -2;
-		}
-
-		IntProperty->SetPropertyValue_InContainer(Object, IntValue);
-	}
-
-	// Handling float property
-	if (FFloatProperty* FloatProperty = CastField<FFloatProperty>(Property))
-	{
-		double FloatValue;
-		if (JS_ToFloat64(Context, &FloatValue, Value) < 0)
-		{
-			JS_ThrowTypeError(Context, "Value failed to cast to float64");
-			return -2;
-		}
-
-		FloatProperty->SetPropertyValue_InContainer(Object, static_cast<float>(FloatValue));
-		return true;
-	}
-	if (FDoubleProperty* DoubleProperty = CastField<FDoubleProperty>(Property))
-	{
-		double DoubleValue;
-		if (JS_ToFloat64(Context, &DoubleValue, Value) < 0)
-		{
-			JS_ThrowTypeError(Context, "Value failed to cast to float64");
-			return -2;
-		}
-
-		DoubleProperty->SetPropertyValue_InContainer(Object, DoubleValue);
-		return true;
-	}
-
-	// Types we are not handled
-	return false;
-}
 
 namespace qjs
 {
+	template <typename T, typename /*_SFINAE*/ = void>
+	struct TUnrealType
+	{
+		static inline JSClassID GetJSClassId() = delete;
+	};
+
+	template <class T>
+	struct TUnrealType<TArray<T>>
+	{
+		static inline JSClassID InnerJSClassId = 0;
+		static inline JSClassExoticMethods ExoticMethods{
+			.get_own_property = [](JSContext* Context, JSPropertyDescriptor* Descriptor, JSValueConst Value,
+			                       JSAtom Prop) -> int
+			{
+				JSValue PropValue = JS_AtomToValue(Context, Prop);
+				int32_t Index;
+				// Convert PropValue to valid index
+				if (JS_ToInt32(Context, &Index, PropValue) == 0 && Index >= 0)
+				{
+					JS_FreeValue(Context, PropValue);
+
+					TArray<T>* ArrayRef = static_cast<TArray<T>*>(JS_GetOpaque(Value, InnerJSClassId));
+					if (!ArrayRef)
+					{
+						JS_ThrowInternalError(Context, "Invalid TArray");
+						return -1;
+					}
+					if (Index >= ArrayRef->Num())
+					{
+						// Index out of range
+						JS_ThrowRangeError(Context, "Trying to index '%d' in a TArray with size '%d'", Index, ArrayRef->Num());
+						return -1; 
+					}
+
+					// Retrieve Element from array
+					T& Element = (*ArrayRef)[Index];
+					JSValue ElementValue = js_traits<T>::wrap(Context, Element);
+
+					Descriptor->flags = JS_PROP_C_W_E;
+					Descriptor->value = ElementValue;
+					return 0;
+				}
+
+				JS_FreeValue(Context, PropValue); // 如果转换失败或不是整数，也需要释放PropValue
+				return -1; // 不是有效的索引，返回错误
+			},
+			.get_own_property_names = nullptr,
+			.delete_property = nullptr,
+			.define_own_property = nullptr,
+			.has_property = nullptr,
+			.get_property = nullptr,
+			.set_property = nullptr
+		};
+
+		static inline JSClassID GetJSClassId(JSContext* Context)
+		{
+			if (0 == InnerJSClassId)
+			{
+				JS_NewClassID(&InnerJSClassId);
+			}
+			auto Runtime = JS_GetRuntime(Context);
+			if (!JS_IsRegisteredClass(Runtime, InnerJSClassId))
+			{
+				FString Name;
+				if constexpr (TIsPointer<T>::Value && TIsDerivedFrom<
+					typename TRemovePointer<T>::Type, UObject>::IsDerived)
+				{
+					const UClass* Class = T::StaticClass();
+					Name = Class->GetName();
+				}
+				else
+				{
+					Name = "UnknownStruct";;
+				}
+				FString ClassName = FString::Printf(TEXT("TArray<%s>"), *Name);
+				JSClassDef ClassDef{
+					.class_name = TCHAR_TO_ANSI(*ClassName),
+					.finalizer = nullptr, // We aren't tracing lifetime of TArray for now
+					.gc_mark = [](JSRuntime* Runtime, JSValueConst Value, JS_MarkFunc* MarkerFunc)
+					{
+						if constexpr (TIsSame<typename TRemovePointer<T>::Type, UJSValueContainer>::Value)
+						{
+							TArray<UJSValueContainer*>* ArrRef = static_cast<TArray<UJSValueContainer*>*>(JS_GetOpaque(
+								Value, InnerJSClassId));
+							if (nullptr != ArrRef)
+							{
+								for (UJSValueContainer* Container : *ArrRef)
+								{
+									if (IsValid(Container))
+									{
+										JS_MarkValue(Runtime, **Container, MarkerFunc);
+									}
+								}
+							}
+						}
+					},
+					.call = nullptr,
+					.exotic = &ExoticMethods,
+				};
+				const int Err = JS_NewClass(Runtime, InnerJSClassId, &ClassDef);
+				if (Err < 0)
+				{
+					JS_ThrowInternalError(Context, "Can't register class %s", TCHAR_TO_ANSI(*ClassName));
+					throw exception{Context};
+				}
+			}
+			return InnerJSClassId;
+		}
+
+		/**
+		 * Convert a TArray to JS object.
+		 * Caller must trace lifetime of TArray to avoid dandling pointer.
+		 * @param Context JSContext
+		 * @param InRef A valid pointer to TArray<T>
+		 * @return A JSValue with InRef as opaque data
+		 */
+		static inline JSValue From(JSContext* Context, TArray<T>* InRef)
+		{
+			check(nullptr != Context);
+			check(nullptr != InRef);
+
+			JSValue NewValue = JS_NewObjectClass(Context, GetJSClassId());
+			JS_SetOpaque(NewValue, InRef);
+			return NewValue;
+		}
+	};
+
 	/** Conversions for non-owning pointers to class T. nullptr corresponds to JS_NULL.
 	 * @tparam T class type
 	 */
@@ -753,7 +639,7 @@ namespace qjs
 					return false;
 				}
 
-				T* UnrealObject = Cast<T>( const_cast<UObject*>(Guard->Get()) );
+				T* UnrealObject = Cast<T>(const_cast<UObject*>(Guard->Get()));
 				if (!IsValid(UnrealObject))
 				{
 					return false;
@@ -791,7 +677,7 @@ namespace qjs
 								ObjectProperty->GetObjectPropertyValue_InContainer(Object));
 							if (IsValid(JSValueContainer) && JSValueContainer->IsValid())
 							{
-								JS_MarkValue(Runtime, Value, MarkerFunc);
+								JS_MarkValue(Runtime, **JSValueContainer, MarkerFunc);
 							}
 						}
 					}
@@ -810,27 +696,29 @@ namespace qjs
 			auto Runtime = JS_GetRuntime(Context);
 			if (!JS_IsRegisteredClass(Runtime, QJSClassId))
 			{
-			}
-			JSClassDef ClassDef{
-				.class_name = ClassName,
-				.finalizer = [](JSRuntime* Runtime, JSValue Object) noexcept
-				{
-					FGCObjectScopeGuard* Guard = static_cast<FGCObjectScopeGuard*>(JS_GetOpaque(Object, QJSClassId));
-					if (nullptr != Guard)
+				JSClassDef ClassDef{
+					.class_name = ClassName,
+					.finalizer = [](JSRuntime* Runtime, JSValue Object) noexcept
 					{
-						// Release referencer
-						delete Guard;
-					}
-				},
-				.gc_mark = &JSClassGCMark, // TODO darc: Impl gc mark for UPROPERTY-Wrapped JSValue
-				.call = ClassCall,
-				.exotic = Exotic,
-			};
-			if (JS_NewClass(Runtime, QJSClassId, &ClassDef))
-			{
-				JS_ThrowInternalError(Context, "Failed to register class %s", ClassName);
-				throw exception{Context};
+						FGCObjectScopeGuard* Guard = static_cast<FGCObjectScopeGuard*>(
+							JS_GetOpaque(Object, QJSClassId));
+						if (nullptr != Guard)
+						{
+							// Release referencer
+							delete Guard;
+						}
+					},
+					.gc_mark = &JSClassGCMark, // TODO darc: Impl gc mark for UPROPERTY-Wrapped JSValue
+					.call = ClassCall,
+					.exotic = Exotic,
+				};
+				if (JS_NewClass(Runtime, QJSClassId, &ClassDef))
+				{
+					JS_ThrowInternalError(Context, "Failed to register class %s", ClassName);
+					throw exception{Context};
+				}
 			}
+			JS_SetClassProto(Context, QJSClassId, Proto);
 		}
 
 		static JSValue wrap(JSContext* ctx, T* ptr)
@@ -874,3 +762,7 @@ namespace qjs
 		}
 	};
 }
+
+static JSValue GetJSValueFromProperty(JSContext* Context, const UObject* Object, FProperty* Property);
+static int SetJSValueToProperty(JSContext* Context, const JSValueConst& Value, UObject* Object, FProperty* Property);
+static inline JSValue GetJSValueFromArrayProperty(JSContext* Context, const UObject* Object, FArrayProperty* Property);
