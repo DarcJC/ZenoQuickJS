@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "QuickJSObjectBase.h"
 #include "quickjs/quickjspp.hpp"
 #include "UObject/GCObjectScopeGuard.h"
 
@@ -563,6 +564,32 @@ namespace qjs
 				return false;
 			},
 		};
+		static void JSClassGCMark(JSRuntime *Runtime, JSValueConst Value,
+                           JS_MarkFunc *MarkerFunc)
+		{
+			if (const FGCObjectScopeGuard* Guard = static_cast<FGCObjectScopeGuard*>(JS_GetOpaque(Value, QJSClassId)); nullptr != Guard)
+			{
+				const UObject* Object = Cast<UObject>(Guard->Get());
+				if (IsValid(Object))
+				{
+					// Find all fields in object
+					// If there is any UJSValueContainer* field, add reference to it
+					// TODO: cache object field might helpful to improve performance
+					for (TFieldIterator<FProperty> PropIter(Object->GetClass()); PropIter; ++PropIter)
+					{
+						FProperty* Property = *PropIter;
+						if (const FObjectProperty* ObjectProperty = CastField<FObjectProperty>(Property))
+						{
+							const UJSValueContainer* JSValueContainer = Cast<UJSValueContainer>(ObjectProperty->GetObjectPropertyValue_InContainer(Object));
+							if (IsValid(JSValueContainer) && JSValueContainer->IsValid())
+							{
+								JS_MarkValue(Runtime, Value, MarkerFunc);
+							}
+						}
+					}
+				}
+			}
+		}
 
 		static void RegisterClass(
 			JSContext* Context, const char* ClassName, JSValue Proto = JS_NULL,
@@ -575,7 +602,6 @@ namespace qjs
 			auto Runtime = JS_GetRuntime(Context);
 			if (!JS_IsRegisteredClass(Runtime, QJSClassId))
 			{
-				JSClassGCMark* Marker = nullptr;
 			}
 			JSClassDef ClassDef{
 				.class_name = ClassName,
@@ -588,7 +614,7 @@ namespace qjs
 						delete Guard;
 					}
 				},
-				.gc_mark = nullptr, // TODO darc: Impl gc mark for UPROPERTY-Wrapped JSValue
+				.gc_mark = &JSClassGCMark, // TODO darc: Impl gc mark for UPROPERTY-Wrapped JSValue
 				.call = ClassCall,
 				.exotic = Exotic,
 			};

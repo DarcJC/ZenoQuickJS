@@ -68,3 +68,8 @@ bool UQuickJSBlueprintLibrary::Eval(const FString& InputString, EQuickJSEvalType
 	}
 	return true;
 }
+
+UQuickJSTestObject* UQuickJSBlueprintLibrary::CreateTestObject()
+{
+	return NewObject<UQuickJSTestObject>();
+}

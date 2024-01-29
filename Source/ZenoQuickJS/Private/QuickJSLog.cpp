@@ -1,4 +1,5 @@
-﻿#include "QuickJSObjectBase.h"
+﻿#include "QuickJSBlueprintLibrary.h"
+#include "QuickJSObjectBase.h"
 #include "ZenoQuickJS.h"
 #include "QuickJSTrait.h"
 
@@ -29,8 +30,6 @@ void SetupLog(qjs::Context::Module& InModule)
 	InModule.function<&PrintFatal>("PrintFatal");
 
 #if WITH_EDITOR
-	UQuickJSTestObject* TestObject = NewObject<UQuickJSTestObject>();
-	JSValue Wrapper = qjs::js_traits<UQuickJSTestObject*>::wrap(InModule.ctx, TestObject);
-	InModule.add("Test", MoveTemp(Wrapper));
+	InModule.function<&UQuickJSBlueprintLibrary::CreateTestObject>("CreateTestObject");
 #endif
 }

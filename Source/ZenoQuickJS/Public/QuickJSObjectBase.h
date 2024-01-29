@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <quickjs/quickjs.h>
+
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "QuickJSObjectBase.generated.h"
@@ -12,6 +14,27 @@ class ZENOQUICKJS_API UQuickJSObjectBase : public UObject
 	GENERATED_BODY()
 
 protected:
+};
+
+UCLASS()
+class ZENOQUICKJS_API UJSValueContainer : public UObject
+{
+	GENERATED_BODY()
+public:
+	/**
+	 * Retrieve the value held in container.
+	 *
+	 * Borrower must ensure the value is GC reachable.
+	 */
+	TSharedRef<JSValue> BorrowChecked() const;
+
+	JSValue* operator*() const;
+
+	bool IsValid() const;
+
+protected:
+	TSharedPtr<JSValue> Inner;
+	
 };
 
 #if WITH_EDITORONLY_DATA

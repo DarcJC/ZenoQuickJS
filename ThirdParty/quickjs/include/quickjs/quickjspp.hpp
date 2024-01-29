@@ -1313,7 +1313,7 @@ public:
     public:
         JSContext * ctx;
         
-        Module(JSContext * ctx, const char * name) : ctx(ctx), name(name)
+        Module(JSContext * ctx, const char * name) : name(name), ctx(ctx)
         {
             m = JS_NewCModule(ctx, name, [](JSContext * ctx, JSModuleDef * m) noexcept {
                 auto& context = Context::get(ctx);
