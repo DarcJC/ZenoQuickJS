@@ -46,5 +46,14 @@ class UQuickJSTestObject : public UObject
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString Text;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float Float;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Integer;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool Boolean;
 };
 #endif

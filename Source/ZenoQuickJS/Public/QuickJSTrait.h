@@ -4,6 +4,248 @@
 #include "quickjs/quickjspp.hpp"
 #include "UObject/GCObjectScopeGuard.h"
 
+static inline JSValue GetJSValueFromProperty(JSContext* Context, const UObject* Object, FProperty* Property)
+{
+	if (!Property)
+	{
+		return JS_UNDEFINED;
+	}
+
+	// handling string property
+	if (FStrProperty* StrProperty = CastField<FStrProperty>(Property))
+	{
+		FString Value = StrProperty->GetPropertyValue_InContainer(Object);
+		return JS_NewString(Context, TCHAR_TO_UTF8(*Value));
+	}
+
+	// handling boolean property
+	if (FBoolProperty* BoolProperty = CastField<FBoolProperty>(Property))
+	{
+		bool Value = BoolProperty->GetPropertyValue_InContainer(Object);
+		return JS_NewBool(Context, Value);
+	}
+
+	// handling integer property
+	if (FByteProperty* ByteProperty = CastField<FByteProperty>(Property))
+	{
+		uint8 Value = ByteProperty->GetPropertyValue_InContainer(Object);
+		return JS_NewUint32(Context, Value);
+	}
+	if (FUInt16Property* IntProperty = CastField<FUInt16Property>(Property))
+	{
+		uint16 Value = IntProperty->GetPropertyValue_InContainer(Object);
+		return JS_NewUint32(Context, Value);
+	}
+	if (FUInt32Property* IntProperty = CastField<FUInt32Property>(Property))
+	{
+		uint32 Value = IntProperty->GetPropertyValue_InContainer(Object);
+		return JS_NewUint32(Context, Value);
+	}
+	if (FUInt64Property* IntProperty = CastField<FUInt64Property>(Property))
+	{
+		uint64 Value = IntProperty->GetPropertyValue_InContainer(Object);
+		return JS_NewInt64(Context, Value);
+	}
+	if (FIntProperty* IntProperty = CastField<FIntProperty>(Property))
+	{
+		int32 Value = IntProperty->GetPropertyValue_InContainer(Object);
+		return JS_NewInt32(Context, Value);
+	}
+	if (FInt8Property* Int8Property = CastField<FInt8Property>(Property))
+	{
+		int8 Value = Int8Property->GetPropertyValue_InContainer(Object);
+		return JS_NewInt32(Context, Value);
+	}
+	if (FInt16Property* IntProperty = CastField<FInt16Property>(Property))
+	{
+		int16 Value = IntProperty->GetPropertyValue_InContainer(Object);
+		return JS_NewInt32(Context, Value);
+	}
+	if (FInt64Property* IntProperty = CastField<FInt64Property>(Property))
+	{
+		int64 Value = IntProperty->GetPropertyValue_InContainer(Object);
+		return JS_NewInt64(Context, Value);
+	}
+
+	// handling float property
+	if (FFloatProperty* FloatProperty = CastField<FFloatProperty>(Property))
+	{
+		float Value = FloatProperty->GetPropertyValue_InContainer(Object);
+		return JS_NewFloat64(Context, Value);
+	}
+	if (FDoubleProperty* DoubleProperty = CastField<FDoubleProperty>(Property))
+	{
+		double Value = DoubleProperty->GetPropertyValue_InContainer(Object);
+		return JS_NewFloat64(Context, Value);
+	}
+
+	// return undefined if can't handle
+	return JS_UNDEFINED;
+}
+
+static int SetJSValueToProperty(JSContext* Context, const JSValueConst& Value, UObject* Object, FProperty* Property)
+{
+	if (!Property)
+	{
+		JS_ThrowReferenceError(Context, "Failed to find property from object");
+		return -1;
+	}
+
+	// Handling string property
+	if (FStrProperty* StrProperty = CastField<FStrProperty>(Property))
+	{
+		// Cast JSValue to string
+		size_t Len;
+		const char* Str = JS_ToCStringLen(Context, &Len, Value);
+		if (!Str)
+		{
+			JS_ThrowTypeError(Context, "Value failed to cast to CString");
+			return -2;
+		}
+
+		// Set string property
+		FString UnrealStr = FString(UTF8_TO_TCHAR(Str));
+		StrProperty->SetPropertyValue_InContainer(Object, UnrealStr);
+		JS_FreeCString(Context, Str);
+		return true;
+	}
+	// Handling boolean property
+	if (FBoolProperty* BoolProperty = CastField<FBoolProperty>(Property))
+	{
+		int32 BoolValue;
+		if (JS_ToInt32(Context, &BoolValue, Value) < 0)
+		{
+			JS_ThrowTypeError(Context, "Value failed to cast to int32(bool)");
+			return -2;
+		}
+
+		BoolProperty->SetPropertyValue_InContainer(Object, BoolValue != 0);
+		return true;
+	}
+
+	// Handling integer property
+	if (FByteProperty* ByteProperty = CastField<FByteProperty>(Property))
+	{
+		uint32 ByteValue;
+		if (JS_ToUint32(Context, &ByteValue, Value) < 0)
+		{
+			JS_ThrowTypeError(Context, "Value failed to cast to uint32");
+			return -2;
+		}
+
+		ByteProperty->SetPropertyValue_InContainer(Object, ByteValue);
+	}
+	if (FUInt16Property* IntProperty = CastField<FUInt16Property>(Property))
+	{
+		uint32 IntValue;
+		if (JS_ToUint32(Context, &IntValue, Value) < 0)
+		{
+			JS_ThrowTypeError(Context, "Value failed to cast to uint32");
+			return -2;
+		}
+
+		IntProperty->SetPropertyValue_InContainer(Object, IntValue);
+	}
+	if (FUInt32Property* IntProperty = CastField<FUInt32Property>(Property))
+	{
+		uint32 IntValue;
+		if (JS_ToUint32(Context, &IntValue, Value) < 0)
+		{
+			JS_ThrowTypeError(Context, "Value failed to cast to uint32");
+			return -2;
+		}
+
+		IntProperty->SetPropertyValue_InContainer(Object, IntValue);
+	}
+	if (FUInt64Property* IntProperty = CastField<FUInt64Property>(Property))
+	{
+		int64 IntValue;
+		if (JS_ToInt64(Context, &IntValue, Value) < 0)
+		{
+			JS_ThrowTypeError(Context, "Value failed to cast to int64");
+			return -2;
+		}
+
+		IntProperty->SetPropertyValue_InContainer(Object, FMath::Abs(IntValue));
+	}
+	if (FIntProperty* IntProperty = CastField<FIntProperty>(Property))
+	{
+		int32 IntValue;
+		if (JS_ToInt32(Context, &IntValue, Value) < 0)
+		{
+			JS_ThrowTypeError(Context, "Value failed to cast to int32");
+			return -2;
+		}
+
+		IntProperty->SetPropertyValue_InContainer(Object, IntValue);
+		return true;
+	}
+	if (FInt8Property* IntProperty = CastField<FInt8Property>(Property))
+	{
+		int32 IntValue;
+		if (JS_ToInt32(Context, &IntValue, Value) < 0)
+		{
+			JS_ThrowTypeError(Context, "Value failed to cast to int32");
+			return -2;
+		}
+
+		IntProperty->SetPropertyValue_InContainer(Object, IntValue);
+		return true;
+	}
+	if (FInt16Property* IntProperty = CastField<FInt16Property>(Property))
+	{
+		int32 IntValue;
+		if (JS_ToInt32(Context, &IntValue, Value) < 0)
+		{
+			JS_ThrowTypeError(Context, "Value failed to cast to int32");
+			return -2;
+		}
+
+		IntProperty->SetPropertyValue_InContainer(Object, IntValue);
+		return true;
+	}
+	if (FInt64Property* IntProperty = CastField<FInt64Property>(Property))
+	{
+		int64 IntValue;
+		if (JS_ToInt64(Context, &IntValue, Value) < 0)
+		{
+			JS_ThrowTypeError(Context, "Value failed to cast to int64");
+			return -2;
+		}
+
+		IntProperty->SetPropertyValue_InContainer(Object, IntValue);
+	}
+
+	// Handling float property
+	if (FFloatProperty* FloatProperty = CastField<FFloatProperty>(Property))
+	{
+		double FloatValue;
+		if (JS_ToFloat64(Context, &FloatValue, Value) < 0)
+		{
+			JS_ThrowTypeError(Context, "Value failed to cast to float64");
+			return -2;
+		}
+
+		FloatProperty->SetPropertyValue_InContainer(Object, static_cast<float>(FloatValue));
+		return true;
+	}
+	if (FDoubleProperty* DoubleProperty = CastField<FDoubleProperty>(Property))
+	{
+		double DoubleValue;
+		if (JS_ToFloat64(Context, &DoubleValue, Value) < 0)
+		{
+			JS_ThrowTypeError(Context, "Value failed to cast to float64");
+			return -2;
+		}
+
+		DoubleProperty->SetPropertyValue_InContainer(Object, DoubleValue);
+		return true;
+	}
+
+	// Types we are not handled
+	return false;
+}
+
 namespace qjs
 {
 	/** Conversions for non-owning pointers to class T. nullptr corresponds to JS_NULL.
@@ -500,20 +742,7 @@ namespace qjs
 
 				// Lookup properties
 				FProperty* Property = UnrealObject->GetClass()->FindPropertyByName(FName(*PropName));
-				if (!Property)
-				{
-					return JS_UNDEFINED;
-				}
-
-				// handling string property
-				if (FStrProperty* StrProperty = CastField<FStrProperty>(Property))
-				{
-					FString Value = StrProperty->GetPropertyValue_InContainer(UnrealObject);
-					return JS_NewString(ctx, TCHAR_TO_UTF8(*Value));
-				}
-
-				// return undefined if can't handle
-				return JS_UNDEFINED;
+				return GetJSValueFromProperty(ctx, UnrealObject, Property);
 			},
 			.set_property = [](JSContext* ctx, JSValueConst obj, JSAtom atom, JSValueConst value, JSValueConst receiver,
 			                   int flags) -> int
@@ -524,7 +753,7 @@ namespace qjs
 					return false;
 				}
 
-				const T* UnrealObject = Cast<T>(Guard->Get());
+				T* UnrealObject = Cast<T>( const_cast<UObject*>(Guard->Get()) );
 				if (!IsValid(UnrealObject))
 				{
 					return false;
@@ -537,37 +766,15 @@ namespace qjs
 
 				// Lookup property
 				FProperty* Property = UnrealObject->GetClass()->FindPropertyByName(FName(*PropName));
-				if (!Property)
-				{
-					return false;
-				}
-
-				// Handling string property
-				if (FStrProperty* StrProperty = CastField<FStrProperty>(Property))
-				{
-					// Cast JSValue to string
-					size_t Len;
-					const char* Str = JS_ToCStringLen(ctx, &Len, value);
-					if (!Str)
-					{
-						return false;
-					}
-
-					// Set string property
-					FString UnrealStr = FString(UTF8_TO_TCHAR(Str));
-					StrProperty->SetPropertyValue_InContainer(static_cast<void*>(const_cast<T*>(UnrealObject)), UnrealStr);
-					JS_FreeCString(ctx, Str);
-					return true;
-				}
-
-				// Types we are not handled
-				return false;
+				return SetJSValueToProperty(ctx, value, UnrealObject, Property);
 			},
 		};
-		static void JSClassGCMark(JSRuntime *Runtime, JSValueConst Value,
-                           JS_MarkFunc *MarkerFunc)
+
+		static void JSClassGCMark(JSRuntime* Runtime, JSValueConst Value,
+		                          JS_MarkFunc* MarkerFunc)
 		{
-			if (const FGCObjectScopeGuard* Guard = static_cast<FGCObjectScopeGuard*>(JS_GetOpaque(Value, QJSClassId)); nullptr != Guard)
+			if (const FGCObjectScopeGuard* Guard = static_cast<FGCObjectScopeGuard*>(JS_GetOpaque(Value, QJSClassId));
+				nullptr != Guard)
 			{
 				const UObject* Object = Cast<UObject>(Guard->Get());
 				if (IsValid(Object))
@@ -580,7 +787,8 @@ namespace qjs
 						FProperty* Property = *PropIter;
 						if (const FObjectProperty* ObjectProperty = CastField<FObjectProperty>(Property))
 						{
-							const UJSValueContainer* JSValueContainer = Cast<UJSValueContainer>(ObjectProperty->GetObjectPropertyValue_InContainer(Object));
+							const UJSValueContainer* JSValueContainer = Cast<UJSValueContainer>(
+								ObjectProperty->GetObjectPropertyValue_InContainer(Object));
 							if (IsValid(JSValueContainer) && JSValueContainer->IsValid())
 							{
 								JS_MarkValue(Runtime, Value, MarkerFunc);
@@ -665,6 +873,4 @@ namespace qjs
 			return nullptr;
 		}
 	};
-
-	void RegisterClass();
 }
