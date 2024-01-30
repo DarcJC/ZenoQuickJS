@@ -56,6 +56,7 @@ public class ZenoQuickJS : ModuleRules
 			new string[]
 			{
 				"Core",
+				"CoreUObject",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -64,7 +65,6 @@ public class ZenoQuickJS : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"CoreUObject",
 				"Engine",
 				"Slate",
 				"SlateCore",

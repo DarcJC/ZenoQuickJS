@@ -6,6 +6,8 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "UObject/SoftObjectPtr.h"
+#include "UObject/WeakObjectPtr.h"
 #include "QuickJSObjectBase.generated.h"
 
 UCLASS()
@@ -64,5 +66,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UQuickJSTestObject* Object;
+
+	UFUNCTION(BlueprintCallable)
+	UQuickJSTestObject* TestFunc(UQuickJSTestObject* InObject);
 };
 #endif

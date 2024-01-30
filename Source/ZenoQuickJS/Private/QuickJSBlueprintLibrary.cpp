@@ -74,6 +74,9 @@ UQuickJSTestObject* UQuickJSBlueprintLibrary::CreateTestObject()
 {
 	UQuickJSTestObject* Object = NewObject<UQuickJSTestObject>();
 	Object->Object = Object;
+	// Object->LazyObject = Object;
+	// Object->SoftObject = Object;
+	// Object->WeakObject = Object;
 	return Object;
 }
 #endif

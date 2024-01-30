@@ -1,6 +1,6 @@
 #include "QuickJSTrait.h"
 
-static JSValue GetJSValueFromProperty(JSContext* Context, const UObject* Object, FProperty* Property)
+static JSValue GetJSValueFromProperty(JSContext* Context, void const* Object, FProperty* Property)
 {
 	if (!Property)
 	{
@@ -88,7 +88,12 @@ static JSValue GetJSValueFromProperty(JSContext* Context, const UObject* Object,
 	return JS_UNDEFINED;
 }
 
-static int SetJSValueToProperty(JSContext* Context, const JSValueConst& Value, UObject* Object, FProperty* Property)
+JSValue GetJSValueFromFunction(JSContext* Context, const UObject* Object, UFunction* Function)
+{
+	return qjs::detail::unreal_function::WrapFunction(Context, Function);
+}
+
+static int SetJSValueToProperty(JSContext* Context, const JSValueConst& Value, void* Object, FProperty* Property)
 {
 	if (!Property)
 	{

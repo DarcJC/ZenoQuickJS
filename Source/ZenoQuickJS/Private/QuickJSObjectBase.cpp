@@ -3,6 +3,8 @@
 
 #include "QuickJSObjectBase.h"
 
+#include "ZenoQuickJS.h"
+
 TSharedRef<JSValue> UJSValueContainer::BorrowChecked() const
 {
 	return Inner.ToSharedRef();
@@ -23,3 +25,18 @@ bool UJSValueContainer::CheckIsWeakRef() const
 {
 	return bIsWeak;
 }
+
+#if WITH_EDITOR
+UQuickJSTestObject* UQuickJSTestObject::TestFunc(UQuickJSTestObject* InObject)
+{
+	if (IsValid(InObject))
+	{
+		UE_LOG(LogQuickJS, Display, TEXT("Float: %.2f"), InObject->Float);
+	}
+	else
+	{
+		UE_LOG(LogQuickJS, Warning, TEXT("Passing invalid object to test func"));
+	}
+	return InObject;
+}
+#endif
