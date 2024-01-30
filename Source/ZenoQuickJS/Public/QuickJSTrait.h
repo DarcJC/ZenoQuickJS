@@ -675,7 +675,8 @@ namespace qjs
 						{
 							const UJSValueContainer* JSValueContainer = Cast<UJSValueContainer>(
 								ObjectProperty->GetObjectPropertyValue_InContainer(Object));
-							if (IsValid(JSValueContainer) && JSValueContainer->IsValid())
+							// We won't mark reachability for weak value ref
+							if (IsValid(JSValueContainer) && JSValueContainer->IsValid() && !JSValueContainer->CheckIsWeakRef())
 							{
 								JS_MarkValue(Runtime, **JSValueContainer, MarkerFunc);
 							}
@@ -765,4 +766,4 @@ namespace qjs
 
 static JSValue GetJSValueFromProperty(JSContext* Context, const UObject* Object, FProperty* Property);
 static int SetJSValueToProperty(JSContext* Context, const JSValueConst& Value, UObject* Object, FProperty* Property);
-static inline JSValue GetJSValueFromArrayProperty(JSContext* Context, const UObject* Object, FArrayProperty* Property);
+static JSValue GetJSValueFromArrayProperty(JSContext* Context, const UObject* Object, FArrayProperty* Property);

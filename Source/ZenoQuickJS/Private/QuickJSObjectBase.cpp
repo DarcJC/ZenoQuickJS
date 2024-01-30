@@ -18,3 +18,8 @@ bool UJSValueContainer::IsValid() const
 {
 	return Inner.IsValid();
 }
+
+bool UJSValueContainer::CheckIsWeakRef() const
+{
+	return bIsWeak;
+}

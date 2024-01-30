@@ -32,10 +32,14 @@ public:
 
 	bool IsValid() const;
 
-	
+	bool CheckIsWeakRef() const;
 
 protected:
 	TSharedPtr<JSValue> Inner;
+
+	// If weak flags is set, JSValue held by container might GC by JS VM.
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
+	bool bIsWeak = false;
 	
 };
 

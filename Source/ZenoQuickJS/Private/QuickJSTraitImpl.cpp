@@ -75,7 +75,8 @@ static JSValue GetJSValueFromProperty(JSContext* Context, const UObject* Object,
 		return JS_NewFloat64(Context, Value);
 	}
 
-	if (FObjectProperty* ObjectProperty = CastField<FObjectProperty>(Property))
+	// handling object property
+	if (FObjectPropertyBase* ObjectProperty = CastField<FObjectPropertyBase>(Property))
 	{
 		// We check validation of UObject when the script trying to visit it
 		// Not here
@@ -245,8 +246,9 @@ static int SetJSValueToProperty(JSContext* Context, const JSValueConst& Value, U
 		DoubleProperty->SetPropertyValue_InContainer(Object, DoubleValue);
 		return true;
 	}
-	
-	if (FObjectProperty* ObjectProperty = CastField<FObjectProperty>(Property))
+
+	// Object properties
+	if (FObjectPropertyBase* ObjectProperty = CastField<FObjectPropertyBase>(Property))
 	{
 		UObject* UnrealObject = qjs::js_traits<UObject*>::unwrap(Context, Value);
 		if (!IsValid(UnrealObject))
@@ -261,7 +263,11 @@ static int SetJSValueToProperty(JSContext* Context, const JSValueConst& Value, U
 			return true;
 		}
 		UClass* ValueClass = UnrealObject->GetClass();
-		JS_ThrowTypeError(Context, "Excepted '%s' class, found '%s'",TCHAR_TO_ANSI(*PropertyClass->GetName()), TCHAR_TO_ANSI(*ValueClass->GetName()));
+		JS_ThrowTypeError(
+			Context,
+			"Excepted '%s' class, found '%s'",
+			TCHAR_TO_ANSI(*PropertyClass->GetName()),
+			TCHAR_TO_ANSI(*ValueClass->GetName()));
 		return -3;
 	}
 
@@ -269,12 +275,13 @@ static int SetJSValueToProperty(JSContext* Context, const JSValueConst& Value, U
 	return false;
 }
 
-static inline JSValue GetJSValueFromArrayProperty(JSContext* Context, const UObject* Object, FArrayProperty* Property)
+static JSValue GetJSValueFromArrayProperty(JSContext* Context, const UObject* Object, FArrayProperty* Property)
 {
-	if (!Context || !Object || !Property) {
+	if (!Context || !IsValid(Object) || !Property) {
         return JS_UNDEFINED;
     }
 
+	// Property->
 	// void* ArrayDataPtr = Property->ContainsObjectReference()
 	
 	return JS_UNDEFINED;
