@@ -291,3 +291,90 @@ static JSValue GetJSValueFromArrayProperty(JSContext* Context, const UObject* Ob
 	
 	return JS_UNDEFINED;
 }
+
+JSValue ConvertReturnParamToJSValue(JSContext* Context, void* ReturnParamAddress, FProperty* Property)
+{
+	if (!Property)
+    {
+        return JS_UNDEFINED;
+    }
+
+    // handling string property
+    if (FStrProperty* StrProperty = CastField<FStrProperty>(Property))
+    {
+        FString Value = StrProperty->GetPropertyValue(ReturnParamAddress);
+        return JS_NewString(Context, TCHAR_TO_UTF8(*Value));
+    }
+
+    // handling boolean property
+    if (FBoolProperty* BoolProperty = CastField<FBoolProperty>(Property))
+    {
+        bool Value = BoolProperty->GetPropertyValue(ReturnParamAddress);
+        return JS_NewBool(Context, Value);
+    }
+
+    // handling integer property
+    if (FByteProperty* ByteProperty = CastField<FByteProperty>(Property))
+    {
+        uint8 Value = ByteProperty->GetPropertyValue(ReturnParamAddress);
+        return JS_NewUint32(Context, Value);
+    }
+    if (FUInt16Property* IntProperty = CastField<FUInt16Property>(Property))
+    {
+        uint16 Value = IntProperty->GetPropertyValue(ReturnParamAddress);
+        return JS_NewUint32(Context, Value);
+    }
+    if (FUInt32Property* IntProperty = CastField<FUInt32Property>(Property))
+    {
+        uint32 Value = IntProperty->GetPropertyValue(ReturnParamAddress);
+        return JS_NewUint32(Context, Value);
+    }
+    if (FUInt64Property* IntProperty = CastField<FUInt64Property>(Property))
+    {
+        uint64 Value = IntProperty->GetPropertyValue(ReturnParamAddress);
+        return JS_NewInt64(Context, Value);
+    }
+    if (FIntProperty* IntProperty = CastField<FIntProperty>(Property))
+    {
+        int32 Value = IntProperty->GetPropertyValue(ReturnParamAddress);
+        return JS_NewInt32(Context, Value);
+    }
+    if (FInt8Property* Int8Property = CastField<FInt8Property>(Property))
+    {
+        int8 Value = Int8Property->GetPropertyValue(ReturnParamAddress);
+        return JS_NewInt32(Context, Value);
+    }
+    if (FInt16Property* IntProperty = CastField<FInt16Property>(Property))
+    {
+        int16 Value = IntProperty->GetPropertyValue(ReturnParamAddress);
+        return JS_NewInt32(Context, Value);
+    }
+    if (FInt64Property* IntProperty = CastField<FInt64Property>(Property))
+    {
+        int64 Value = IntProperty->GetPropertyValue(ReturnParamAddress);
+        return JS_NewInt64(Context, Value);
+    }
+
+    // handling float property
+    if (FFloatProperty* FloatProperty = CastField<FFloatProperty>(Property))
+    {
+        float Value = FloatProperty->GetPropertyValue(ReturnParamAddress);
+        return JS_NewFloat64(Context, Value);
+    }
+    if (FDoubleProperty* DoubleProperty = CastField<FDoubleProperty>(Property))
+    {
+        double Value = DoubleProperty->GetPropertyValue(ReturnParamAddress);
+        return JS_NewFloat64(Context, Value);
+    }
+	
+	// handling object property
+	if (FObjectPropertyBase* ObjectProperty = CastField<FObjectPropertyBase>(Property))
+	{
+		// We check validation of UObject when the script trying to visit it
+		// Not here
+		UObject* ObjectValue = *static_cast<UObject**>(ReturnParamAddress);
+		return qjs::js_traits<UObject*>::wrap(Context, ObjectValue);
+	}
+
+	return JS_UNDEFINED;
+}

@@ -9,6 +9,7 @@ static JSValue GetJSValueFromProperty(JSContext* Context, void const*  Object, F
 static JSValue GetJSValueFromFunction(JSContext* Context, const UObject* Object, UFunction* Function);
 static int SetJSValueToProperty(JSContext* Context, const JSValueConst& Value, void* Object, FProperty* Property);
 static JSValue GetJSValueFromArrayProperty(JSContext* Context, const UObject* Object, FArrayProperty* Property);
+static JSValue ConvertReturnParamToJSValue(JSContext* Context, void* ReturnParamAddress, FProperty* Property);
 
 namespace qjs
 {
@@ -639,7 +640,8 @@ namespace qjs
 					return JS_NULL;
 				}
 
-				const T* UnrealObject = Cast<T>(JSData->Guard->Get());
+				const UObject* TmpObj = JSData->Guard->Get();
+				const T* UnrealObject = Cast<T>(TmpObj);
 				if (!IsValid(UnrealObject))
 				{
 					return JS_ThrowReferenceError(ctx, "Trying to visit an invalid UObject");
@@ -876,11 +878,11 @@ namespace qjs
 			    	Self->ProcessEvent(FunctionToCall, FuncParams.GetStructMemory());
 
 				const bool bHasReturnParam = FunctionToCall->ReturnValueOffset != MAX_uint16;
-				uint8* ReturnValueAddress = bHasReturnParam ? (FuncParams.GetStructMemory() + FunctionToCall->ReturnValueOffset) : nullptr;
+				void* ReturnValueAddress = bHasReturnParam ? reinterpret_cast<void*>(FuncParams.GetStructMemory() + FunctionToCall->ReturnValueOffset) : nullptr;
 				FProperty* ReturnProperty = FunctionToCall->GetReturnProperty();
 				if (nullptr != ReturnValueAddress && nullptr != ReturnProperty)
 				{
-					return GetJSValueFromProperty(Context, ReturnValueAddress, ReturnProperty);
+					return ConvertReturnParamToJSValue(Context, ReturnValueAddress, ReturnProperty);
 				}
 
 				return JS_UNDEFINED;
