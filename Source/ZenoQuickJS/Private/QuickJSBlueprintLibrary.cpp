@@ -4,6 +4,13 @@
 #include "QuickJSErrors.h"
 #include "QuickJSModule.h"
 
+static void DumpJSObject(JSContext* Context, JSValueConst Value, const FString& FilePath = "<unknown>")
+{
+	const char* CStr = JS_ToCString(Context, Value);
+	UE_LOG(LogQuickJS, Error, TEXT("Error occurred '%s' : %hs"), *FilePath, nullptr != CStr ? CStr : "[exception]");
+	JS_FreeCString(Context, CStr);
+}
+
 bool UQuickJSBlueprintLibrary::EvalFile(const FString& FilePath, EQuickJSEvalType EvalType)
 {
 	FZenoQuickJSModule& Module = FZenoQuickJSModule::GetChecked();
@@ -19,7 +26,8 @@ bool UQuickJSBlueprintLibrary::EvalFile(const FString& FilePath, EQuickJSEvalTyp
 			if (Ret.isError())
 			{
 				const JSValue Value = Ret.as<JSValue>();
-				UE_LOG(LogQuickJS, Error, TEXT("Eval return an error %hs"), JS_ToCString(Context->ctx, Value));
+				DumpJSObject(Context->ctx, Value, FilePath);
+				JS_FreeValue(Context->ctx, Value);
 			}
 			else
 			{
@@ -34,7 +42,18 @@ bool UQuickJSBlueprintLibrary::EvalFile(const FString& FilePath, EQuickJSEvalTyp
 	}
 	catch (qjs::exception& Err)
 	{
-		UE_LOG(LogQuickJS, Error, TEXT("Failed to execute file %s : %hs"), *FilePath, Err.get().toJSON().c_str());
+		const JSValue ExceptionValue = Err.get();
+		DumpJSObject(Context->ctx, ExceptionValue, FilePath);
+		if (JS_IsError(Context->ctx, ExceptionValue))
+		{
+			const JSValue Val = JS_GetPropertyStr(Context->ctx, ExceptionValue, "stack");
+			if (!JS_IsUndefined(Val))
+			{
+				DumpJSObject(Context->ctx, Val, FilePath);
+			}
+			JS_FreeValue(Context->ctx, Val);
+		}
+		JS_FreeValue(Context->ctx, ExceptionValue);
 	}
 	catch (std::exception& Err)
 	{

@@ -3,7 +3,9 @@
 function ArgListToString(...args) {
     let output = "";
     for (let arg of args) {
-        if (typeof arg == "object") {
+        if (arg?.stack) {
+            output += arg?.stack;
+        } else if (typeof arg == "object") {
             output += `${JSON.stringify(arg)}\t`;
         } else {
             output += `${String(arg)}\t`;
