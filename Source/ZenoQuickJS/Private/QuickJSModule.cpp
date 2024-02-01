@@ -1,5 +1,6 @@
 ﻿#include "QuickJSModule.h"
 
+#include "QuickJSBlueprintLibrary.h"
 #include "QuickJSErrors.h"
 #include "QuickJSSearchPath.h"
 #include "ZenoQuickJS.h"
@@ -111,12 +112,21 @@ TArray<FString>& FQuickJSModule::GetValidFileExtension()
 void FQuickJSModule::InitUnrealExportModule(const TSharedRef<qjs::Context>& InContext)
 {
 	qjs::Context::Module& UnrealModule = InContext->addModule("unreal");
+	
+	JSValue Value = qjs::js_traits<UObject*>::wrap(InContext->ctx, nullptr, UQuickJSBlueprintLibrary::StaticClass());
+	UnrealModule.add("QuickJSBlueprintLibrary", MoveTemp(Value));
+	
 	for (TObjectIterator<UStruct> It; It; ++It)
 	{
 		UStruct* Struct = *It;
 		if (Struct->IsA<UClass>())
 		{
-			UClass* Class = Cast<UClass>(Struct);
+			// UClass* Class = Cast<UClass>(Struct);
+			// JSValue Value = qjs::js_traits<UObject*>::wrap(InContext->ctx, nullptr, Class);
+			// UnrealModule.add(TCHAR_TO_ANSI(*Class->GetName()), MoveTemp(Value));
+		}
+		else if (Struct->IsA<UScriptStruct>())
+		{
 		}
 		else
 		{

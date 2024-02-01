@@ -5,7 +5,7 @@
 #include "Templates/RemoveCV.h"
 #include "UObject/GCObjectScopeGuard.h"
 
-static JSValue GetJSValueFromProperty(JSContext* Context, void const*  Object, FProperty* Property);
+static JSValue GetJSValueFromProperty(JSContext* Context, void const* Object, FProperty* Property);
 static JSValue GetJSValueFromFunction(JSContext* Context, const UObject* Object, UFunction* Function);
 static int SetJSValueToProperty(JSContext* Context, const JSValueConst& Value, void* Object, FProperty* Property);
 static JSValue GetJSValueFromArrayProperty(JSContext* Context, const UObject* Object, FArrayProperty* Property);
@@ -618,74 +618,27 @@ namespace qjs
 				}
 				Class = T::StaticClass();
 			}
+			
+			explicit FJSClassData(T* InObject, UClass* InClass)
+				: Class(InClass)
+			{
+				check(nullptr != InClass);
+				if (nullptr != InObject)
+				{
+					Guard = new FGCObjectScopeGuard(InObject);
+				}
+			}
 
 			~FJSClassData() noexcept
 			{
 				delete Guard;
 			}
 		};
-		
+
+		static JSValue wrap(JSContext* ctx, T* ptr, UClass* Class = T::StaticClass());
+
 		inline static JSClassID QJSClassId = 0;
-		inline static JSClassExoticMethods ExoticMethods{
-			.get_own_property = nullptr,
-			.get_own_property_names = nullptr,
-			.delete_property = nullptr,
-			.define_own_property = nullptr,
-			.has_property = nullptr,
-			.get_property = [](JSContext* ctx, JSValueConst obj, JSAtom atom, JSValueConst receiver) -> JSValue
-			{
-				FJSClassData* JSData = static_cast<FJSClassData*>(JS_GetOpaque(obj, QJSClassId));
-				if (!JSData || !JSData->Guard)
-				{
-					return JS_NULL;
-				}
-
-				const UObject* TmpObj = JSData->Guard->Get();
-				const T* UnrealObject = Cast<T>(TmpObj);
-				if (!IsValid(UnrealObject))
-				{
-					return JS_ThrowReferenceError(ctx, "Trying to visit an invalid UObject");
-				}
-
-				// Cast JSAtom to FString
-				const char* PropNameCStr = JS_AtomToCString(ctx, atom);
-				FString PropName(PropNameCStr);
-				JS_FreeCString(ctx, PropNameCStr);
-
-				// Lookup properties
-				UClass* Class = UnrealObject->GetClass();
-				if (FProperty* Property = Class->FindPropertyByName(FName(*PropName)); nullptr != Property)
-				{
-					return GetJSValueFromProperty(ctx, UnrealObject, Property);
-				}
-				UFunction* Function = Class->FindFunctionByName(FName(*PropName), EIncludeSuperFlag::IncludeSuper);
-				return GetJSValueFromFunction(ctx, UnrealObject, Function);
-			},
-			.set_property = [](JSContext* ctx, JSValueConst obj, JSAtom atom, JSValueConst value, JSValueConst receiver,
-			                   int flags) -> int
-			{
-				FJSClassData* JSData = static_cast<FJSClassData*>(JS_GetOpaque(obj, QJSClassId));
-				if (!JSData || !JSData->Guard)
-				{
-					return false;
-				}
-
-				T* UnrealObject = Cast<T>(const_cast<UObject*>(JSData->Guard->Get()));
-				if (!IsValid(UnrealObject))
-				{
-					return false;
-				}
-
-				// Cast JSAtom to FString
-				const char* PropNameCStr = JS_AtomToCString(ctx, atom);
-				FString PropName(PropNameCStr);
-				JS_FreeCString(ctx, PropNameCStr);
-
-				// Lookup property
-				FProperty* Property = UnrealObject->GetClass()->FindPropertyByName(FName(*PropName));
-				return SetJSValueToProperty(ctx, value, UnrealObject, Property);
-			},
-		};
+		static JSClassExoticMethods ExoticMethods;
 
 		static void JSClassGCMark(JSRuntime* Runtime, JSValueConst Value,
 		                          JS_MarkFunc* MarkerFunc)
@@ -754,26 +707,6 @@ namespace qjs
 			JS_SetClassProto(Context, QJSClassId, Proto);
 		}
 
-		static JSValue wrap(JSContext* ctx, T* ptr)
-		{
-			UClass* Class = T::StaticClass();
-			if (QJSClassId == 0) // not registered
-			{
-				// If you have an error here with T=JSValueConst
-				// it probably means you are passing JSValueConst to where JSValue is expected
-				RegisterClass(ctx, TCHAR_TO_ANSI(*Class->GetName()), JS_NULL, nullptr, &ExoticMethods);
-			}
-			auto JSObject = JS_NewObjectClass(ctx, QJSClassId);
-			if (JS_IsException(JSObject))
-				return JSObject;
-			if (nullptr != ptr)
-			{
-				FJSClassData* OpaqueData = new FJSClassData(ptr);
-				JS_SetOpaque(JSObject, OpaqueData);
-			}
-			return JSObject;
-		}
-
 		static T* unwrap(JSContext* ctx, JSValueConst v)
 		{
 			if (JS_IsNull(v))
@@ -782,7 +715,7 @@ namespace qjs
 			}
 			const JSClassID ObjectClassID = JS_GetClassID(v);
 			FJSClassData* JSData = static_cast<FJSClassData*>(JS_GetOpaque2(ctx, v, ObjectClassID));
-			if (nullptr != JSData)
+			if (nullptr != JSData && nullptr != JSData->Guard)
 			{
 				const FGCObjectScopeGuard* ScopeGuard = JSData->Guard;
 				const T* Object = Cast<T>(ScopeGuard->Get());
@@ -791,7 +724,7 @@ namespace qjs
 					return const_cast<T*>(Object);
 				}
 			}
-			
+
 			return nullptr;
 		}
 
@@ -814,12 +747,114 @@ namespace qjs
 		}
 	};
 
+	template <class T>
+	JSValue js_traits<T*, std::enable_if_t<TIsDerivedFrom<T, UObject>::IsDerived, void>>::wrap(JSContext* ctx, T* ptr,
+		UClass* Class)
+	{
+		if (QJSClassId == 0) // not registered
+		{
+			// If you have an error here with T=JSValueConst
+			// it probably means you are passing JSValueConst to where JSValue is expected
+			RegisterClass(ctx, TCHAR_TO_ANSI(*Class->GetName()), JS_NULL, nullptr, &ExoticMethods);
+		}
+		auto JSObject = JS_NewObjectClass(ctx, QJSClassId);
+		if (JS_IsException(JSObject))
+			return JSObject;
+		FJSClassData* OpaqueData = new FJSClassData(ptr, Class);
+		JS_SetOpaque(JSObject, OpaqueData);
+		return JSObject;
+	}
+
+	template <class T>
+	JSClassExoticMethods js_traits<T*, std::enable_if_t<TIsDerivedFrom<T, UObject>::IsDerived, void>>::ExoticMethods = {
+		.get_own_property = nullptr,
+		.get_own_property_names = nullptr,
+		.delete_property = nullptr,
+		.define_own_property = nullptr,
+		.has_property = nullptr,
+		.get_property = [](JSContext* ctx, JSValueConst obj, JSAtom atom, JSValueConst receiver) -> JSValue
+		{
+			FJSClassData* JSData = static_cast<FJSClassData*>(JS_GetOpaque(obj, QJSClassId));
+			if (!JSData || (!JSData->Guard && !JSData->Class))
+			{
+				return JS_NULL;
+			}
+
+			// Cast JSAtom to FString
+			const char* PropNameCStr = JS_AtomToCString(ctx, atom);
+			FString PropName(PropNameCStr);
+			JS_FreeCString(ctx, PropNameCStr);
+
+			if (PropName == "UnrealClass")
+			{
+				return js_traits<UClass*>::wrap(ctx, JSData->Class, UClass::StaticClass());
+			}
+			if (PropName == "UnrealClassName")
+			{
+				UClass* Class = JSData->Class;
+				FString Name = Class->GetName();
+				return JS_NewStringLen(ctx, TCHAR_TO_ANSI(*Name), Name.Len());
+			}
+
+			if (JSData->Guard != nullptr)
+			{
+				const UObject* TmpObj = JSData->Guard->Get();
+				const T* UnrealObject = Cast<T>(TmpObj);
+				if (!IsValid(UnrealObject))
+				{
+					return JS_ThrowReferenceError(ctx, "Trying to visit an invalid UObject");
+				}
+
+				// Lookup properties
+				UClass* Class = UnrealObject->GetClass();
+				if (FProperty* Property = Class->FindPropertyByName(FName(*PropName)); nullptr != Property)
+				{
+					return GetJSValueFromProperty(ctx, UnrealObject, Property);
+				}
+				UFunction* Function = Class->FindFunctionByName(FName(*PropName), EIncludeSuperFlag::IncludeSuper);
+				return GetJSValueFromFunction(ctx, UnrealObject, Function);
+			}
+			else // JSData->Class != nullptr
+			{
+				UClass* Class = JSData->Class;
+				UFunction* Function = Class->FindFunctionByName(FName(*PropName), EIncludeSuperFlag::IncludeSuper);
+				return GetJSValueFromFunction(ctx, nullptr, Function);
+			}
+		},
+		.set_property = [](JSContext* ctx, JSValueConst obj, JSAtom atom, JSValueConst value, JSValueConst receiver,
+		                   int flags) -> int
+		{
+			FJSClassData* JSData = static_cast<FJSClassData*>(JS_GetOpaque(obj, QJSClassId));
+			if (!JSData || !JSData->Guard)
+			{
+				return false;
+			}
+
+			T* UnrealObject = Cast<T>(const_cast<UObject*>(JSData->Guard->Get()));
+			if (!IsValid(UnrealObject))
+			{
+				return false;
+			}
+
+			// Cast JSAtom to FString
+			const char* PropNameCStr = JS_AtomToCString(ctx, atom);
+			FString PropName(PropNameCStr);
+			JS_FreeCString(ctx, PropNameCStr);
+
+			// Lookup property
+			FProperty* Property = UnrealObject->GetClass()->FindPropertyByName(FName(*PropName));
+			return SetJSValueToProperty(ctx, value, UnrealObject, Property);
+		},
+	};
+
+
 	namespace detail
 	{
 		struct unreal_function
 		{
-			static inline JSValue InvokeFunction(JSContext* Context, JSValueConst FuncObj, JSValueConst ThisObj, int Argc,
-                                                            JSValueConst* Argv, int Flags)
+			static inline JSValue InvokeFunction(JSContext* Context, JSValueConst FuncObj, JSValueConst ThisObj,
+			                                     int Argc,
+			                                     JSValueConst* Argv, int Flags)
 			{
 				UFunction* FunctionToCall = js_traits<UFunction*>::unwrap(Context, FuncObj);
 				UObject* Self = js_traits<UObject*>::unwrap(Context, ThisObj);
@@ -828,7 +863,7 @@ namespace qjs
 				{
 					return JS_ThrowReferenceError(Context, "Invalid UFunction to called with");
 				}
-				
+
 				// Check this context
 				const bool bIsStaticFunc = !!(FunctionToCall->FunctionFlags & FUNC_Static);
 				if (!bIsStaticFunc && !IsValid(Self))
@@ -841,7 +876,7 @@ namespace qjs
 				{
 					return JS_ThrowInternalError(Context, "Not enough arguments to call 'UFunction'");
 				}
-				
+
 				UObject* CDO = SelfClass->ClassDefaultObject;
 
 				// Try to fill function params
@@ -850,7 +885,8 @@ namespace qjs
 				{
 					int32 CurrentParamCount = 0;
 					void* EndAddress = FuncParams.GetStructMemory() + FunctionToCall->ParmsSize;
-					for ( TFieldIterator<FProperty> Iterator(FunctionToCall); Iterator && Iterator->HasAnyPropertyFlags(CPF_Parm); ++Iterator )
+					for (TFieldIterator<FProperty> Iterator(FunctionToCall); Iterator && Iterator->
+					     HasAnyPropertyFlags(CPF_Parm); ++Iterator)
 					{
 						const bool bIsReturnParam = Iterator->HasAnyPropertyFlags(CPF_ReturnParm);
 						const bool bIsOutParam = Iterator->HasAnyPropertyFlags(CPF_OutParm);
@@ -863,22 +899,25 @@ namespace qjs
 						}
 
 						FProperty* Param = *Iterator;
-						
+
 						// void* ParamAddress = FuncParams.GetStructMemory() + Param->GetOffset_ForUFunction();
 						JSValueConst ArgValue = Argv[CurrentParamCount];
 						SetJSValueToProperty(Context, ArgValue, FuncParams.GetStructMemory(), Param);
-						
+
 						++CurrentParamCount;
 					}
 				}
 
 				if (bIsStaticFunc)
 					CDO->ProcessEvent(FunctionToCall, FuncParams.GetStructMemory());
-			    else
-			    	Self->ProcessEvent(FunctionToCall, FuncParams.GetStructMemory());
+				else
+					Self->ProcessEvent(FunctionToCall, FuncParams.GetStructMemory());
 
 				const bool bHasReturnParam = FunctionToCall->ReturnValueOffset != MAX_uint16;
-				void* ReturnValueAddress = bHasReturnParam ? reinterpret_cast<void*>(FuncParams.GetStructMemory() + FunctionToCall->ReturnValueOffset) : nullptr;
+				void* ReturnValueAddress = bHasReturnParam
+					                           ? reinterpret_cast<void*>(FuncParams.GetStructMemory() + FunctionToCall->
+						                           ReturnValueOffset)
+					                           : nullptr;
 				FProperty* ReturnProperty = FunctionToCall->GetReturnProperty();
 				if (nullptr != ReturnValueAddress && nullptr != ReturnProperty)
 				{

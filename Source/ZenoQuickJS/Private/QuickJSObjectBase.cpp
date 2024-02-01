@@ -39,4 +39,9 @@ UQuickJSTestObject* UQuickJSTestObject::TestFunc(UQuickJSTestObject* InObject)
 	}
 	return InObject;
 }
+
+void UQuickJSTestObject::SetInteger(int32 NewValue)
+{
+	Integer = NewValue;
+}
 #endif

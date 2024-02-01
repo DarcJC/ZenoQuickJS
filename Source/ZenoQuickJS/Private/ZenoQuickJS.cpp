@@ -92,6 +92,9 @@ void FZenoQuickJSModule::InitContext(const TSharedRef<qjs::Context>& Context)
 
 	// Load debug module
 	UQuickJSBlueprintLibrary::EvalFile("debug.js", EQuickJSEvalType::Module);
+
+	// Setup unreal module
+	FQuickJSModule::InitUnrealExportModule(Context);
 }
 
 #undef LOCTEXT_NAMESPACE

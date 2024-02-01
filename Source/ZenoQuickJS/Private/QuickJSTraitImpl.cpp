@@ -81,7 +81,7 @@ static JSValue GetJSValueFromProperty(JSContext* Context, void const* Object, FP
 		// We check validation of UObject when the script trying to visit it
 		// Not here
 		UObject* ObjectValue = ObjectProperty->GetObjectPropertyValue_InContainer(Object);
-		return qjs::js_traits<UObject*>::wrap(Context, ObjectValue);
+		return qjs::js_traits<UObject*>::wrap(Context, ObjectValue, ObjectProperty->PropertyClass);
 	}
 
 	// return undefined if can't handle
@@ -373,7 +373,7 @@ JSValue ConvertReturnParamToJSValue(JSContext* Context, void* ReturnParamAddress
 		// We check validation of UObject when the script trying to visit it
 		// Not here
 		UObject* ObjectValue = *static_cast<UObject**>(ReturnParamAddress);
-		return qjs::js_traits<UObject*>::wrap(Context, ObjectValue);
+		return qjs::js_traits<UObject*>::wrap(Context, ObjectValue, ObjectProperty->PropertyClass);
 	}
 
 	return JS_UNDEFINED;

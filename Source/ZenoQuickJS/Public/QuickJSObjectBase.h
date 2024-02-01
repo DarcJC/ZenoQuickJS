@@ -69,5 +69,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	UQuickJSTestObject* TestFunc(UQuickJSTestObject* InObject);
+
+	UFUNCTION(BlueprintCallable)
+	void SetInteger(int32 NewValue);
 };
 #endif
