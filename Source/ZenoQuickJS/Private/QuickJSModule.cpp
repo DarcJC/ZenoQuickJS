@@ -112,18 +112,24 @@ TArray<FString>& FQuickJSModule::GetValidFileExtension()
 void FQuickJSModule::InitUnrealExportModule(const TSharedRef<qjs::Context>& InContext)
 {
 	qjs::Context::Module& UnrealModule = InContext->addModule("unreal");
-	
-	JSValue Value = qjs::js_traits<UObject*>::wrap(InContext->ctx, nullptr, UQuickJSBlueprintLibrary::StaticClass());
-	UnrealModule.add("QuickJSBlueprintLibrary", MoveTemp(Value));
+	//
+	// JSValue Value = qjs::js_traits<UObject*>::wrap(InContext->ctx, nullptr, UQuickJSBlueprintLibrary::StaticClass());
+	// UnrealModule.add("QuickJSBlueprintLibrary", MoveTemp(Value));
+	JSValue UnrealClassValue = JS_NewObject(InContext->ctx);
 	
 	for (TObjectIterator<UStruct> It; It; ++It)
 	{
 		UStruct* Struct = *It;
 		if (Struct->IsA<UClass>())
 		{
-			// UClass* Class = Cast<UClass>(Struct);
-			// JSValue Value = qjs::js_traits<UObject*>::wrap(InContext->ctx, nullptr, Class);
-			// UnrealModule.add(TCHAR_TO_ANSI(*Class->GetName()), MoveTemp(Value));
+			UClass* Class = Cast<UClass>(Struct);
+			if (Class->ClassFlags & CLASS_Native)
+			{
+				JSValue Value = qjs::js_traits<UObject*>::wrap(InContext->ctx, nullptr, Class);
+				const char* Name = TCHAR_TO_ANSI(*Class->GetName());
+				UE_LOG(LogTemp, Warning, TEXT("Exporting: %hs"), Name);
+				JS_DefinePropertyValue(InContext->ctx, UnrealClassValue, JS_NewAtom(InContext->ctx, Name), MoveTemp(Value), JS_PROP_ENUMERABLE);
+			}
 		}
 		else if (Struct->IsA<UScriptStruct>())
 		{
@@ -132,4 +138,6 @@ void FQuickJSModule::InitUnrealExportModule(const TSharedRef<qjs::Context>& InCo
 		{
 		}
 	}
+	
+	UnrealModule.add("class", MoveTemp(UnrealClassValue));
 }
