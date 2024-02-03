@@ -20,11 +20,12 @@ void FZenoQuickJSModule::StartupModule()
 
 	const TSharedRef<qjs::Context> Context = GetGlobalContext();
 
-	/** Register Unreal Module */
-	{
-	}
-
-	// Set flag
+	ReloadBuiltInCommand = IConsoleManager::Get().RegisterConsoleCommand(
+		TEXT("js.builtin.reload"),
+		TEXT("Reloading built-in modules"),
+		FConsoleCommandDelegate::CreateStatic(&FZenoQuickJSModule::ReloadBuiltInModule),
+		ECVF_Default
+	);
 }
 
 void FZenoQuickJSModule::ShutdownModule()
@@ -32,6 +33,8 @@ void FZenoQuickJSModule::ShutdownModule()
 	bIsLiving = false;
 	// TODO: notify scripts
 	GlobalContext.Reset();
+
+	IConsoleManager::Get().UnregisterConsoleObject(ReloadBuiltInCommand);
 }
 
 qjs::Runtime& FZenoQuickJSModule::GetManagedRuntime()
@@ -73,6 +76,15 @@ void FZenoQuickJSModule::AddScriptSearchPath(const FString& DirPath, int32 Prior
 	ScriptSourceSearchDirectory.HeapSort(FQuickJSSearchPathPredicate{});
 }
 
+void FZenoQuickJSModule::ReloadBuiltInModule()
+{
+	// Load built-in module
+	UQuickJSBlueprintLibrary::EvalFile("debug.js", EQuickJSEvalType::Module);
+	UQuickJSBlueprintLibrary::EvalFile("unreal.js", EQuickJSEvalType::Module);
+
+	UE_LOG(LogQuickJS, Display, TEXT("Reloaded built-in modules"));
+}
+
 void FZenoQuickJSModule::InitContext(const TSharedRef<qjs::Context>& Context)
 {
 	// Setup zeno module
@@ -90,11 +102,11 @@ void FZenoQuickJSModule::InitContext(const TSharedRef<qjs::Context>& Context)
 	// AddScriptSearchPath("/ZenoQuickJS/Scripts/BuiltIn", 0);
 	AddScriptSearchPath(FPaths::ProjectDir() / "Scripts" / "BuiltIn", 0);
 
-	// Load debug module
-	UQuickJSBlueprintLibrary::EvalFile("debug.js", EQuickJSEvalType::Module);
-
 	// Setup unreal module
 	FQuickJSModule::InitUnrealExportModule(Context);
+
+	// Load built-in module
+	ReloadBuiltInModule();
 }
 
 #undef LOCTEXT_NAMESPACE

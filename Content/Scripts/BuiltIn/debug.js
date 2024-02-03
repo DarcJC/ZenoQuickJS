@@ -1,4 +1,6 @@
-﻿import { PrintInfo, PrintError } from 'zeno';
+﻿'use strict'
+
+import { PrintInfo, PrintError } from 'zeno';
 
 function ArgListToString(...args) {
     let output = "";
@@ -21,6 +23,17 @@ globalThis.console = {
     error: function (...args) {
         PrintError(ArgListToString(...args));
     },
+    assert: function (expr, ...args) {
+        if (!expr) {
+            throw `line ${this.getCurrentLineNumber(3)} assert failed: ${ArgListToString(args)}`;
+        }
+    },
+    getCurrentLineNumber(depth = 2) {
+        let error = new Error();
+        let stack = error.stack;
+        let line = stack.split("\n")?.[depth]?.match(/:(\d+):\d+\)?$/)?.[1];
+        return line || -1;
+    }
 };
 
 globalThis.process = {

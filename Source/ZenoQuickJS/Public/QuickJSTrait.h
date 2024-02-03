@@ -795,6 +795,10 @@ namespace qjs
 				FString Name = Class->GetName();
 				return JS_NewStringLen(ctx, TCHAR_TO_ANSI(*Name), Name.Len());
 			}
+			if (PropName == "IsValid")
+			{
+				return JS_NewBool(ctx, !!JSData->Guard);
+			}
 
 			if (JSData->Guard != nullptr)
 			{

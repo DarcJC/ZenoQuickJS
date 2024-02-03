@@ -127,7 +127,6 @@ void FQuickJSModule::InitUnrealExportModule(const TSharedRef<qjs::Context>& InCo
 			{
 				JSValue Value = qjs::js_traits<UObject*>::wrap(InContext->ctx, nullptr, Class);
 				const char* Name = TCHAR_TO_ANSI(*Class->GetName());
-				UE_LOG(LogTemp, Warning, TEXT("Exporting: %hs"), Name);
 				JS_DefinePropertyValue(InContext->ctx, UnrealClassValue, JS_NewAtom(InContext->ctx, Name), MoveTemp(Value), JS_PROP_ENUMERABLE);
 			}
 		}
@@ -139,5 +138,10 @@ void FQuickJSModule::InitUnrealExportModule(const TSharedRef<qjs::Context>& InCo
 		}
 	}
 	
-	UnrealModule.add("class", MoveTemp(UnrealClassValue));
+	UnrealModule.add("Class", MoveTemp(UnrealClassValue));
+	UnrealModule.add("NewObject", [] (UObject* Outer, const UClass* FromClass) -> UObject*
+	{
+		return NewObject<UObject>(Outer, FromClass);
+	});
+	UnrealModule.add("GetTransientPackage", std::function(&GetTransientPackage));
 }

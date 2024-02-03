@@ -28,6 +28,8 @@ public:
 	static const TArray<FQuickJSSearchPath>& GetScriptSearchPaths();
 	static void AddScriptSearchPath(const FString& DirPath, int32 Priority = 0);
 
+	static void ReloadBuiltInModule();
+
 protected:
 	static void InitContext(const TSharedRef<qjs::Context>& Context);
 
@@ -36,6 +38,8 @@ private:
 	TSharedPtr<qjs::Context> GlobalContext;
 
 	bool bIsLiving = false;
+
+	IConsoleCommand* ReloadBuiltInCommand = nullptr;
 	
 	static inline TArray<FQuickJSSearchPath> ScriptSourceSearchDirectory {};
 };
