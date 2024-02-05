@@ -647,7 +647,7 @@ namespace qjs
 				nullptr != JSData && nullptr != JSData->Guard)
 			{
 				const UObject* Object = Cast<UObject>(JSData->Guard->Get());
-				if (IsValid(Object))
+				if (IsValid(Object) && !IsEngineExitRequested())
 				{
 					// Find all fields in object
 					// If there is any UJSValueContainer* field, add reference to it

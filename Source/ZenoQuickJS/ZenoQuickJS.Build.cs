@@ -75,6 +75,10 @@ public class ZenoQuickJS : ModuleRules
 
 		if (Target.bBuildEditor)
 		{
+			PrivateDependencyModuleNames.AddRange(
+				new string[] {
+                    "DeveloperSettings",
+				});
 		}
 		
 		
